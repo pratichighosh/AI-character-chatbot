@@ -1,0 +1,29 @@
+{
+   "name": "pratichi-chatbot-backend",
+   "version": "1.0.0",
+   "description": "AI Chatbot backend using Gemini API, JWT Auth, and Email OTP by Pratichi Ghosh",
+   "main": "index.js",
+   "type": "module",
+   "scripts": {
+      "start": "node index.js",
+      "dev": "nodemon index.js"
+   },
+   "keywords": [],
+   "author": "",
+   "license": "ISC",
+   "dependencies": {
+      "@google/generative-ai": "^0.24.1",
+      "@sendgrid/mail": "^8.1.5",
+      "axios": "^1.10.0",
+      "cors": "^2.8.5",
+      "dotenv": "^16.6.1",
+      "express": "^4.21.2",
+      "jsonwebtoken": "^9.0.2",
+      "mongodb": "^6.17.0",
+      "mongoose": "^8.16.4",
+      "nodemailer": "^6.10.1"
+   },
+   "devDependencies": {
+      "nodemon": "^3.1.4"
+   }
+}
