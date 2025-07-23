@@ -1,4 +1,4 @@
-// components/CharacterSelector.jsx - ENHANCED WITH REALISTIC CHARACTER OPTIONS
+// components/CharacterSelector.jsx - FIXED WITH CHARACTER OPTIONS
 import React, { useState, useEffect } from 'react';
 import { ChatData } from '../context/ChatContext';
 import { UserData } from '../context/UserContext';
@@ -24,11 +24,73 @@ const CharacterSelector = ({ onClose }) => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  
+  // ✅ FIXED: Default character options with fallback data
   const [characterOptions, setCharacterOptions] = useState({
-    personalityTraits: [],
-    speakingStyles: [],
-    languages: [],
-    responseStyles: []
+    personalityTraits: [
+      "Wise and thoughtful, speaks with deep understanding",
+      "Curious and analytical, loves exploring ideas", 
+      "Friendly and encouraging, always supportive",
+      "Humorous and witty, uses jokes and metaphors",
+      "Calm and patient, speaks slowly and clearly",
+      "Energetic and enthusiastic, very expressive",
+      "Mysterious and philosophical, speaks in riddles",
+      "Professional and formal, business-like approach",
+      "Creative and artistic, thinks outside the box",
+      "Practical and direct, gets straight to the point",
+      "Empathetic and caring, emotionally supportive",
+      "Intellectual and scholarly, loves complex topics",
+      "Playful and childlike, maintains wonder and joy",
+      "Bold and confident, takes charge of situations",
+      "Gentle and nurturing, like a caring teacher"
+    ],
+    speakingStyles: [
+      "Uses scientific metaphors and explains things logically",
+      "Speaks in poetic, beautiful language with imagery",
+      "Uses simple, clear explanations that anyone can understand",
+      "Tells stories and examples to make points",
+      "Asks thoughtful questions to guide learning",
+      "Uses humor and jokes to make conversations fun",
+      "Speaks formally with proper grammar and vocabulary",
+      "Uses modern slang and casual expressions",
+      "Gives step-by-step instructions and practical advice",
+      "Speaks philosophically about deeper meanings",
+      "Uses encouraging words and positive reinforcement",
+      "Challenges ideas and plays devil's advocate",
+      "Speaks dramatically with lots of emotion",
+      "Uses technical terms and industry jargon",
+      "Keeps responses short and to the point"
+    ],
+    languages: [
+      { value: 'english', label: 'English' },
+      { value: 'hindi', label: 'Hindi' },
+      { value: 'bengali', label: 'Bengali' },
+      { value: 'spanish', label: 'Spanish' },
+      { value: 'french', label: 'French' },
+      { value: 'german', label: 'German' },
+      { value: 'italian', label: 'Italian' },
+      { value: 'portuguese', label: 'Portuguese' },
+      { value: 'russian', label: 'Russian' },
+      { value: 'japanese', label: 'Japanese' },
+      { value: 'korean', label: 'Korean' },
+      { value: 'chinese', label: 'Chinese (Mandarin)' },
+      { value: 'arabic', label: 'Arabic' },
+      { value: 'multilingual', label: 'Multilingual' }
+    ],
+    responseStyles: [
+      { value: 'conversational', label: 'Conversational - Natural, flowing dialogue' },
+      { value: 'educational', label: 'Educational - Teaching and explaining' },
+      { value: 'supportive', label: 'Supportive - Encouraging and helpful' },
+      { value: 'analytical', label: 'Analytical - Logical and detailed' },
+      { value: 'creative', label: 'Creative - Imaginative and artistic' },
+      { value: 'professional', label: 'Professional - Business-like and formal' },
+      { value: 'casual', label: 'Casual - Relaxed and informal' },
+      { value: 'enthusiastic', label: 'Enthusiastic - Energetic and excited' },
+      { value: 'calm', label: 'Calm - Peaceful and soothing' },
+      { value: 'humorous', label: 'Humorous - Funny and entertaining' },
+      { value: 'philosophical', label: 'Philosophical - Deep and thoughtful' },
+      { value: 'practical', label: 'Practical - Focused on solutions' }
+    ]
   });
   
   const [newCharacter, setNewCharacter] = useState({
@@ -48,7 +110,7 @@ const CharacterSelector = ({ onClose }) => {
     isPublic: false
   });
 
-  // Fetch character creation options
+  // ✅ FIXED: Enhanced character options fetching with fallback
   useEffect(() => {
     fetchCharacterOptions();
   }, []);
@@ -61,13 +123,30 @@ const CharacterSelector = ({ onClose }) => {
 
   const fetchCharacterOptions = async () => {
     try {
+      // ✅ FIXED: Correct backend URL
+      const backendUrl = server || "https://ai-character-chatbot-2.onrender.com";
       const token = localStorage.getItem("token");
-      const { data } = await axios.get(`${server}/api/characters/options`, {
-        headers: { Authorization: `Bearer ${token}` }
+      
+      console.log('🎭 Fetching character options from:', `${backendUrl}/api/characters/options`);
+      
+      const { data } = await axios.get(`${backendUrl}/api/characters/options`, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
+      
+      console.log('✅ Character options fetched:', data);
+      
+      // Update state with fetched options
       setCharacterOptions(data);
+      
     } catch (error) {
-      console.error('Failed to fetch character options:', error);
+      console.error('❌ Failed to fetch character options:', error);
+      console.log('🔄 Using default character options as fallback');
+      
+      // Keep using the default options we initialized with
+      toast.error('Using default character options (could not fetch from server)');
     }
   };
 
@@ -109,6 +188,8 @@ const CharacterSelector = ({ onClose }) => {
         expertise: newCharacter.expertise.split(',').map(exp => exp.trim()).filter(exp => exp)
       };
       
+      console.log('🎭 Creating character:', characterData);
+      
       const createdCharacter = await createCharacter(characterData);
       
       // Reset form
@@ -129,7 +210,8 @@ const CharacterSelector = ({ onClose }) => {
       }, 500);
       
     } catch (error) {
-      // Error is handled by createCharacter function
+      console.error('❌ Character creation failed:', error);
+      toast.error('Failed to create character. Please try again.');
     }
   };
 
@@ -215,7 +297,7 @@ const CharacterSelector = ({ onClose }) => {
                   )}
                   <div className="character-meta">
                     <span className="category">{character.category}</span>
-                    <span className="usage">Used {character.usageCount} times</span>
+                    <span className="usage">Used {character.usageCount || 0} times</span>
                     {character.primaryLanguage && (
                       <span className="language">{character.primaryLanguage}</span>
                     )}
@@ -291,16 +373,16 @@ const CharacterSelector = ({ onClose }) => {
                   />
                 </div>
 
-                {/* Enhanced Personality Selection */}
+                {/* ✅ FIXED: Enhanced Personality Selection with working options */}
                 <div className="form-group">
-                  <label>Personality Traits *</label>
+                  <label>Personality Traits * ({characterOptions.personalityTraits.length} options available)</label>
                   <select
                     value={newCharacter.personality}
                     onChange={(e) => setNewCharacter({...newCharacter, personality: e.target.value, customPersonality: ''})}
                   >
                     <option value="">Select personality traits...</option>
-                    {characterOptions.personalityTraits.map(trait => (
-                      <option key={trait} value={trait}>{trait}</option>
+                    {characterOptions.personalityTraits.map((trait, index) => (
+                      <option key={index} value={trait}>{trait}</option>
                     ))}
                     <option value="custom">Custom (enter below)</option>
                   </select>
@@ -314,16 +396,16 @@ const CharacterSelector = ({ onClose }) => {
                   )}
                 </div>
 
-                {/* Enhanced Speaking Style Selection */}
+                {/* ✅ FIXED: Enhanced Speaking Style Selection with working options */}
                 <div className="form-group">
-                  <label>Speaking Style *</label>
+                  <label>Speaking Style * ({characterOptions.speakingStyles.length} options available)</label>
                   <select
                     value={newCharacter.speakingStyle}
                     onChange={(e) => setNewCharacter({...newCharacter, speakingStyle: e.target.value, customSpeakingStyle: ''})}
                   >
                     <option value="">Select speaking style...</option>
-                    {characterOptions.speakingStyles.map(style => (
-                      <option key={style} value={style}>{style}</option>
+                    {characterOptions.speakingStyles.map((style, index) => (
+                      <option key={index} value={style}>{style}</option>
                     ))}
                     <option value="custom">Custom (enter below)</option>
                   </select>
@@ -338,8 +420,9 @@ const CharacterSelector = ({ onClose }) => {
                 </div>
 
                 <div className="form-row">
+                  {/* ✅ FIXED: Primary Language with working options */}
                   <div className="form-group">
-                    <label>Primary Language</label>
+                    <label>Primary Language ({characterOptions.languages.length} options)</label>
                     <select
                       value={newCharacter.primaryLanguage}
                       onChange={(e) => setNewCharacter({...newCharacter, primaryLanguage: e.target.value})}
@@ -349,8 +432,10 @@ const CharacterSelector = ({ onClose }) => {
                       ))}
                     </select>
                   </div>
+                  
+                  {/* ✅ FIXED: Response Style with working options */}
                   <div className="form-group">
-                    <label>Response Style</label>
+                    <label>Response Style ({characterOptions.responseStyles.length} options)</label>
                     <select
                       value={newCharacter.responseStyle}
                       onChange={(e) => setNewCharacter({...newCharacter, responseStyle: e.target.value})}
