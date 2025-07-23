@@ -25,30 +25,29 @@ dotenv.config();
 const app = express();
 
 // STEP 3: FIXED CORS CONFIGURATION - Updated with correct frontend URLs
+// 🔧 CORS-ONLY FIX - Replace CORS section in your index.js
+// Your backend is working, just need to fix CORS for correct frontend URL
+
+// STEP 3: FIXED CORS CONFIGURATION - Updated with YOUR ACTUAL frontend URLs
 app.use(cors({
   origin: [
     // Local development
     "http://localhost:5173", 
     "http://localhost:3000",
-    "http://localhost:5000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
     
-    // ⭐ FIXED: Correct production frontend URLs
-    "https://ai-character-chatbot-7.onrender.com",  // ← YOUR ACTUAL FRONTEND
-    "https://ai-character-chatbot-2.onrender.com",
-    "https://ai-character-chatbot.onrender.com",
-    "https://ai-character-chatbot-one.vercel.app",
-    "https://ai-character-chatbot.vercel.app",
+    // ⭐ YOUR ACTUAL FRONTEND URLs (Vercel)
+    "https://ai-character-chatbot-one.vercel.app",  // ← YOUR MAIN FRONTEND
+    "https://ai-character-chatbot-16uj6886g-pratichighoshs-projects.vercel.app",  // ← DEPLOYMENT URL
     
-    // Additional fallbacks
-    "https://ai-character-chatbot-1.onrender.com",
-    "https://ai-character-chatbot-3.onrender.com",
-    "https://ai-character-chatbot-4.onrender.com",
-    "https://ai-character-chatbot-5.onrender.com",
-    "https://ai-character-chatbot-6.onrender.com",
-    "https://ai-character-chatbot-8.onrender.com",
-    "https://ai-character-chatbot-9.onrender.com"
+    // All possible Vercel variations
+    "https://ai-character-chatbot.vercel.app",
+    "https://ai-character-chatbot-git-main-pratichighoshs-projects.vercel.app",
+    
+    // Render fallbacks (in case you switch)
+    "https://ai-character-chatbot-7.onrender.com",
+    "https://ai-character-chatbot-2.onrender.com"
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -65,7 +64,7 @@ app.use((req, res, next) => {
     console.log(`🌐 CORS request from: ${origin}`);
   }
   
-  // Allow any origin containing our app name or localhost
+  // Allow any origin containing our app name, localhost, or vercel
   if (origin && (
     origin.includes('ai-character-chatbot') || 
     origin.includes('localhost') ||
