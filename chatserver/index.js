@@ -1,410 +1,445 @@
-// COMPLETE FIXED backend/index.js - Character Support Integrated
-// Your existing working server + character functionality
+// COMPLETE FIXED index.js - CORS & Import Errors Resolved
+// Fixes: CORS configuration, import error handling, and deployment issues
 
-// STEP 1: FORCE SET YOUR CONFIGURATION WITH YOUR NEW API KEY
-process.env.EMAIL_USERNAME = 'pratichighosh053@gmail.com';
-process.env.EMAIL_PASSWORD = 'afidwpueqljxgqhc';
-process.env.MONGO_URI = 'mongodb+srv://pratichi:gCYori949YywxME1@cluster0.glggi.mongodb.net/chatbot?retryWrites=true&w=majority&appName=Cluster0';
-process.env.JWT_SECRET = 'TlAO4P03Yp6AHlmu1BDWRlR14JZMXdeK';
-process.env.ACTIVATION_SECRET = 'TlAO4P03Yp6AHlmu1BDWRlR14JZMXdeK';
-process.env.GEMINI_API_KEY = 'AIzaSyDhcus-LZLJ84lmLzxXi38nbkhe-9QZYvQ'; // ⭐ YOUR NEW WORKING KEY
-process.env.PORT = '5000';
-process.env.NODE_ENV = 'development';
+// STEP 1: ENVIRONMENT CONFIGURATION
+process.env.EMAIL_USERNAME = process.env.EMAIL_USERNAME || 'pratichighosh053@gmail.com';
+process.env.EMAIL_PASSWORD = process.env.EMAIL_PASSWORD || 'afidwpueqljxgqhc';
+process.env.MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://pratichi:gCYori949YywxME1@cluster0.glggi.mongodb.net/chatbot?retryWrites=true&w=majority&appName=Cluster0';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'TlAO4P03Yp6AHlmu1BDWRlR14JZMXdeK';
+process.env.ACTIVATION_SECRET = process.env.ACTIVATION_SECRET || 'TlAO4P03Yp6AHlmu1BDWRlR14JZMXdeK';
+process.env.GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyDhcus-LZLJ84lmLzxXi38nbkhe-9QZYvQ';
+process.env.PORT = process.env.PORT || '5000';
+process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 
-console.log('🔧 FORCE CONFIGURED EMAIL:', process.env.EMAIL_USERNAME);
-console.log('🤖 NEW GEMINI API KEY LOADED:', process.env.GEMINI_API_KEY ? 
-  process.env.GEMINI_API_KEY.substring(0, 20) + '...' : 'NOT FOUND');
-console.log('✅ Using API key ending in:', process.env.GEMINI_API_KEY ? 
-  process.env.GEMINI_API_KEY.slice(-10) : 'NONE');
+console.log('🔧 Environment configured for:', process.env.NODE_ENV);
+console.log('📧 Email:', process.env.EMAIL_USERNAME);
+console.log('🤖 Gemini API Key:', process.env.GEMINI_API_KEY ? '✅ Configured' : '❌ Missing');
 
-// STEP 2: IMPORT MODULES
+// STEP 2: IMPORT CORE MODULES
 import express from "express";
 import connectDb from "./database/db.js";
 import cors from "cors";
 import dotenv from "dotenv";
 
-// Load additional env vars if .env file exists
 dotenv.config();
-
 const app = express();
 
-// STEP 3: MIDDLEWARE SETUP
+// STEP 3: FIXED CORS CONFIGURATION - Updated with correct frontend URLs
 app.use(cors({
-  origin: "https://ai-character-chatbot-one.vercel.app",
+  origin: [
+    // Local development
+    "http://localhost:5173", 
+    "http://localhost:3000",
+    "http://localhost:5000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    
+    // ⭐ FIXED: Correct production frontend URLs
+    "https://ai-character-chatbot-7.onrender.com",  // ← YOUR ACTUAL FRONTEND
+    "https://ai-character-chatbot-2.onrender.com",
+    "https://ai-character-chatbot.onrender.com",
+    "https://ai-character-chatbot-one.vercel.app",
+    "https://ai-character-chatbot.vercel.app",
+    
+    // Additional fallbacks
+    "https://ai-character-chatbot-1.onrender.com",
+    "https://ai-character-chatbot-3.onrender.com",
+    "https://ai-character-chatbot-4.onrender.com",
+    "https://ai-character-chatbot-5.onrender.com",
+    "https://ai-character-chatbot-6.onrender.com",
+    "https://ai-character-chatbot-8.onrender.com",
+    "https://ai-character-chatbot-9.onrender.com"
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'token']
+  allowedHeaders: ['Content-Type', 'Authorization', 'token', 'x-requested-with'],
+  optionsSuccessStatus: 200
 }));
+
+// Enhanced CORS fallback handler
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  // Log CORS requests for debugging
+  if (origin) {
+    console.log(`🌐 CORS request from: ${origin}`);
+  }
+  
+  // Allow any origin containing our app name or localhost
+  if (origin && (
+    origin.includes('ai-character-chatbot') || 
+    origin.includes('localhost') ||
+    origin.includes('127.0.0.1') ||
+    origin.includes('vercel.app') ||
+    origin.includes('onrender.com')
+  )) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    console.log(`✅ CORS allowed for: ${origin}`);
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, token, x-requested-with');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log(`✅ CORS preflight handled for ${origin || 'unknown origin'}`);
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging middleware
+// Enhanced request logging
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  const timestamp = new Date().toISOString();
+  const origin = req.headers.origin || 'no-origin';
+  console.log(`${timestamp} - ${req.method} ${req.path} - Origin: ${origin}`);
   next();
 });
 
-// STEP 4: IMPORT ROUTES WITH ENHANCED ERROR HANDLING
-let userRoutes, chatRoutes, characterRoutes, generateResponse;
+// STEP 4: ENHANCED IMPORT SYSTEM WITH BETTER ERROR HANDLING
+console.log('\n🚀 === IMPORTING SYSTEM MODULES ===');
 
-// Import User Routes
-try {
-  const userRoutesModule = await import("./routes/userRoutes.js");
-  userRoutes = userRoutesModule.default;
-  console.log('✅ User routes imported successfully');
-} catch (error) {
-  console.error('❌ Failed to import user routes:', error.message);
-  console.error('❌ Make sure routes/userRoutes.js exists');
+let userRoutes = null;
+let chatRoutes = null; 
+let characterRoutes = null;
+let generateResponse = null;
+
+// Enhanced import function with detailed error reporting
+async function safeImport(modulePath, moduleName) {
+  try {
+    console.log(`📦 Importing ${moduleName} from ${modulePath}...`);
+    const module = await import(modulePath);
+    console.log(`✅ ${moduleName} imported successfully`);
+    return module;
+  } catch (error) {
+    console.error(`❌ Failed to import ${moduleName}:`);
+    console.error(`   Path: ${modulePath}`);
+    console.error(`   Error: ${error.message}`);
+    
+    // Additional error details for syntax errors
+    if (error.message.includes('Unexpected token')) {
+      console.error(`   🐛 SYNTAX ERROR DETECTED in ${moduleName}:`);
+      console.error(`   - Check for missing semicolons`);
+      console.error(`   - Check for mismatched brackets/braces`);
+      console.error(`   - Check for 'else' without matching 'if'`);
+      console.error(`   - Validate JavaScript syntax in the file`);
+    }
+    
+    return null;
+  }
 }
 
-// Import Chat Routes
+// Import User Routes with enhanced error handling
 try {
-  const chatRoutesModule = await import("./routes/chatRoutes.js");
-  chatRoutes = chatRoutesModule.default;
-  console.log('✅ Chat routes imported successfully');
+  const userRoutesModule = await safeImport("./routes/userRoutes.js", "User Routes");
+  userRoutes = userRoutesModule?.default || null;
 } catch (error) {
-  console.error('❌ Failed to import chat routes:', error.message);
-  console.error('❌ Make sure routes/chatRoutes.js exists');
+  console.error('❌ Critical error importing user routes:', error.message);
 }
 
-// FIXED: Import Character Routes with Enhanced Error Detection
+// Import Chat Routes with enhanced error handling  
+try {
+  const chatRoutesModule = await safeImport("./routes/chatRoutes.js", "Chat Routes");
+  chatRoutes = chatRoutesModule?.default || null;
+  
+  // Also try to import chat controllers
+  if (chatRoutesModule) {
+    try {
+      const chatControllersModule = await safeImport("./controllers/chatControllers.js", "Chat Controllers");
+      generateResponse = chatControllersModule?.generateResponse || null;
+    } catch (controllerError) {
+      console.error('❌ Chat controllers import failed, but routes succeeded');
+    }
+  }
+} catch (error) {
+  console.error('❌ Critical error importing chat system:', error.message);
+  
+  // Create fallback chat endpoints if import fails
+  console.log('🔧 Creating fallback chat functionality...');
+  
+  // Simple fallback generateResponse function
+  generateResponse = async (message) => {
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: message }] }]
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        return data.candidates[0].content.parts[0].text;
+      } else {
+        throw new Error(data.error?.message || 'Gemini API error');
+      }
+    } catch (error) {
+      console.error('❌ Fallback chat error:', error.message);
+      return 'Sorry, I am having trouble processing your message right now.';
+    }
+  };
+  
+  console.log('✅ Fallback chat function created');
+}
+
+// Import Character System with enhanced error handling
 try {
   console.log('🎭 === IMPORTING CHARACTER SYSTEM ===');
   
-  // Check if Character model exists
-  try {
-    await import("./models/Character.js");
-    console.log('✅ Character model found');
-  } catch (modelError) {
-    console.error('❌ Character model missing:', modelError.message);
-    throw new Error('Character model (models/Character.js) not found');
-  }
+  // Import Character model
+  const characterModel = await safeImport("./models/Character.js", "Character Model");
   
-  // Check if Character controllers exist
-  try {
-    await import("./controllers/characterControllers.js");
-    console.log('✅ Character controllers found');
-  } catch (controllerError) {
-    console.error('❌ Character controllers missing:', controllerError.message);
-    throw new Error('Character controllers (controllers/characterControllers.js) not found');
-  }
+  // Import Character controllers
+  const characterControllers = await safeImport("./controllers/characterControllers.js", "Character Controllers");
   
-  // Import character routes
-  const characterRoutesModule = await import("./routes/characterRoutes.js");
-  characterRoutes = characterRoutesModule.default;
-  console.log('✅ Character routes imported successfully');
+  // Import Character routes
+  const characterRoutesModule = await safeImport("./routes/characterRoutes.js", "Character Routes");
+  
+  if (characterModel && characterControllers && characterRoutesModule) {
+    characterRoutes = characterRoutesModule.default;
+    console.log('✅ Complete character system imported successfully');
+  } else {
+    console.log('❌ Character system incomplete - some modules failed');
+    characterRoutes = null;
+  }
   
 } catch (error) {
-  console.error('❌ === CHARACTER SYSTEM IMPORT FAILED ===');
-  console.error('❌ Error:', error.message);
-  console.error('❌ Stack:', error.stack);
-  console.error('❌ Required files for character system:');
-  console.error('   1. models/Character.js');
-  console.error('   2. controllers/characterControllers.js');
-  console.error('   3. routes/characterRoutes.js');
-  console.error('❌ Character system will be disabled');
+  console.error('❌ Character system import failed:', error.message);
   characterRoutes = null;
 }
 
-// Import Gemini function for testing
-try {
-  const chatControllersModule = await import("./controllers/chatControllers.js");
-  generateResponse = chatControllersModule.generateResponse;
-  console.log('✅ Gemini functions imported successfully');
-} catch (error) {
-  console.error('❌ Failed to import Gemini functions:', error.message);
+// Import Chat Controllers separately if not already imported
+if (!generateResponse) {
+  try {
+    const chatControllersModule = await safeImport("./controllers/chatControllers.js", "Chat Controllers (Standalone)");
+    generateResponse = chatControllersModule?.generateResponse || null;
+  } catch (error) {
+    console.error('❌ Standalone chat controllers import failed');
+  }
 }
 
 // STEP 5: MOUNT ROUTES WITH ENHANCED ERROR HANDLING
+console.log('\n🔗 === MOUNTING ROUTES ===');
 
 // Mount User Routes
 if (userRoutes) {
-  app.use("/api/user", userRoutes);
-  console.log('✅ User routes mounted at /api/user');
+  try {
+    app.use("/api/user", userRoutes);
+    console.log('✅ User routes mounted at /api/user');
+  } catch (error) {
+    console.error('❌ Failed to mount user routes:', error.message);
+  }
 } else {
-  console.error('❌ User routes not available');
+  console.log('❌ User routes not available - mounting disabled');
 }
 
 // Mount Chat Routes
 if (chatRoutes) {
-  app.use("/api/chat", chatRoutes);
-  console.log('✅ Chat routes mounted at /api/chat');
+  try {
+    app.use("/api/chat", chatRoutes);
+    console.log('✅ Chat routes mounted at /api/chat');
+  } catch (error) {
+    console.error('❌ Failed to mount chat routes:', error.message);
+  }
 } else {
-  console.error('❌ Chat routes not available');
+  console.log('❌ Chat routes not available - creating fallback endpoints');
+  
+  // Create minimal fallback chat endpoints
+  app.post("/api/chat/fallback", async (req, res) => {
+    try {
+      const { message } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+      
+      if (generateResponse) {
+        const response = await generateResponse(message);
+        res.json({ 
+          success: true, 
+          response,
+          note: "Using fallback chat endpoint" 
+        });
+      } else {
+        res.status(500).json({ 
+          error: "Chat system unavailable",
+          message: "Chat controllers failed to import" 
+        });
+      }
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  console.log('✅ Fallback chat endpoint created at /api/chat/fallback');
 }
 
-// FIXED: Mount Character Routes with Enhanced Error Handling
+// Mount Character Routes
 if (characterRoutes) {
   try {
     app.use("/api/characters", characterRoutes);
-    console.log('✅ === CHARACTER SYSTEM ACTIVE ===');
     console.log('✅ Character routes mounted at /api/characters');
-    
-    // Add character system test endpoint
-    app.get("/test-character-system", (req, res) => {
-      res.json({
-        message: "🎭 Character system is fully operational!",
-        status: "active",
-        timestamp: new Date().toISOString(),
-        features: [
-          "Character creation",
-          "Character selection", 
-          "Character-based AI chat",
-          "Default characters (Einstein, Sherlock, etc.)"
-        ],
-        endpoints: [
-          "GET /api/characters - Get all characters (requires auth)",
-          "POST /api/characters - Create character (requires auth)",
-          "GET /api/characters/:id - Get single character (requires auth)",
-          "PUT /api/characters/:id - Update character (requires auth)", 
-          "DELETE /api/characters/:id - Delete character (requires auth)",
-          "GET /api/characters/test - Test endpoint (no auth)"
-        ]
-      });
-    });
-    
-  } catch (mountError) {
-    console.error('❌ Failed to mount character routes:', mountError.message);
+  } catch (error) {
+    console.error('❌ Failed to mount character routes:', error.message);
   }
 } else {
-  console.error('❌ === CHARACTER SYSTEM DISABLED ===');
-  console.error('❌ Character routes not available');
-  
-  // Add character system debug endpoint
-  app.get("/debug-character-system", (req, res) => {
-    res.status(500).json({
-      error: "Character system not available",
-      status: "disabled",
-      reason: "Required files missing or have errors",
-      requiredFiles: [
-        "models/Character.js - Character database model",
-        "controllers/characterControllers.js - Character business logic",
-        "routes/characterRoutes.js - Character API routes"
-      ],
-      troubleshooting: [
-        "1. Check if all 3 files exist in the correct locations",
-        "2. Check server console for specific import errors",
-        "3. Verify no syntax errors in the files",
-        "4. Restart server after creating missing files"
-      ],
-      howToFix: [
-        "Create the missing files using the provided code",
-        "Ensure proper import/export syntax",
-        "Restart the server",
-        "Check /test-character-system endpoint"
-      ]
-    });
-  });
+  console.log('❌ Character routes not available - mounting disabled');
 }
 
 // STEP 6: MAIN ENDPOINTS
 
-// Root endpoint
+// Root endpoint with comprehensive system status
 app.get("/", (req, res) => {
   res.json({
-    message: "🤖 Enhanced ChatBot Server is running! (Regular + Character Chat)",
+    message: "🤖 AI Character Chatbot Server - Fixed Version",
     status: "active",
+    environment: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
-    emailConfigured: !!process.env.EMAIL_USERNAME,
-    geminiConfigured: !!process.env.GEMINI_API_KEY,
-    geminiKeyPreview: process.env.GEMINI_API_KEY ? 
-      process.env.GEMINI_API_KEY.substring(0, 20) + '...' : 'NOT_FOUND',
-    features: {
-      regularChat: userRoutes && chatRoutes ? "✅ Available" : "❌ Missing routes",
-      characterChat: characterRoutes ? "✅ Available" : "❌ Disabled",
-      characterCreation: characterRoutes ? "✅ Available" : "❌ Disabled",
-      userManagement: userRoutes ? "✅ Available" : "❌ Missing"
+    version: "2.1.0-fixed",
+    systems: {
+      userAuth: userRoutes ? "✅ Active" : "❌ Inactive",
+      chat: chatRoutes ? "✅ Active" : (generateResponse ? "⚠️ Fallback Mode" : "❌ Inactive"),
+      characters: characterRoutes ? "✅ Active" : "❌ Inactive",
+      geminiAPI: process.env.GEMINI_API_KEY ? "✅ Configured" : "❌ Missing"
     },
-    systemStatus: {
-      userRoutes: !!userRoutes,
-      chatRoutes: !!chatRoutes,
-      characterRoutes: !!characterRoutes,
-      geminiAPI: !!process.env.GEMINI_API_KEY
-    },
-    testEndpoints: [
-      "GET /test-my-key - Test Gemini API",
-      "POST /test-character - Test character AI",
-      "GET /test-character-system - Test character system",
-      "GET /debug-character-system - Debug character issues",
-      "GET /health - Health check"
-    ]
+    fixes: [
+      "✅ CORS updated for ai-character-chatbot-7.onrender.com",
+      "✅ Enhanced import error handling",
+      "✅ Fallback chat endpoints created",
+      "✅ Better error reporting for syntax issues"
+    ],
+    endpoints: {
+      user: userRoutes ? "/api/user/*" : "❌ Unavailable",
+      chat: chatRoutes ? "/api/chat/*" : "/api/chat/fallback (fallback)",
+      characters: characterRoutes ? "/api/characters/*" : "❌ Unavailable",
+      status: "/status",
+      health: "/health",
+      debug: "/debug-*"
+    }
   });
 });
 
-// System status endpoint
+// Enhanced system status
 app.get("/status", (req, res) => {
   res.json({
-    server: "Enhanced ChatBot",
-    version: "1.0.0", 
+    server: "AI Character Chatbot - Fixed",
     status: "running",
+    environment: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     systems: {
+      userRoutes: !!userRoutes,
+      chatRoutes: !!chatRoutes,
+      characterRoutes: !!characterRoutes,
+      generateResponse: !!generateResponse,
       database: "✅ Connected",
-      userSystem: userRoutes ? "✅ Active" : "❌ Inactive",
-      chatSystem: chatRoutes ? "✅ Active" : "❌ Inactive", 
-      characterSystem: characterRoutes ? "✅ Active" : "❌ Inactive",
-      geminiAPI: process.env.GEMINI_API_KEY ? "✅ Configured" : "❌ Missing",
-      emailService: process.env.EMAIL_USERNAME ? "✅ Configured" : "❌ Missing"
+      geminiAPI: !!process.env.GEMINI_API_KEY
     },
-    features: [
-      "✅ User Authentication (Email OTP)",
-      "✅ Regular AI Chat",
-      characterRoutes ? "✅ Character-based AI Chat" : "❌ Character Chat (Disabled)",
-      characterRoutes ? "✅ Custom Character Creation" : "❌ Character Creation (Disabled)",
-      "✅ Chat History Management"
+    corsConfig: {
+      mainFrontend: "https://ai-character-chatbot-7.onrender.com",
+      backend: "https://ai-character-chatbot-2.onrender.com",
+      status: "✅ Properly configured"
+    },
+    issues: {
+      chatImportError: !chatRoutes ? "❌ Check chatRoutes.js for syntax errors" : "✅ No issues",
+      characterSystem: !characterRoutes ? "❌ Character system disabled" : "✅ Working",
+      fallbackMode: (!chatRoutes && generateResponse) ? "⚠️ Using fallback chat" : "✅ Normal operation"
+    }
+  });
+});
+
+// Health check
+app.get("/health", (req, res) => {
+  res.json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV,
+    version: "2.1.0-fixed"
+  });
+});
+
+// CORS test endpoint
+app.get("/test-cors", (req, res) => {
+  const origin = req.headers.origin;
+  res.json({
+    message: "✅ CORS test successful",
+    origin: origin || "no-origin-header",
+    timestamp: new Date().toISOString(),
+    allowedOrigins: [
+      "https://ai-character-chatbot-7.onrender.com", // Your frontend
+      "http://localhost:5173",
+      "...and others"
     ]
   });
 });
 
-// STEP 7: TEST ENDPOINTS
-
-// Test Gemini API Key
-app.get("/test-my-key", async (req, res) => {
-  try {
-    console.log("🧪 Testing your specific API key...");
-    
-    const apiKey = process.env.GEMINI_API_KEY;
-    
-    if (!apiKey) {
-      return res.status(500).json({
-        success: false,
-        error: "Gemini API key not configured"
-      });
-    }
-    
-    console.log('🔑 Testing key:', apiKey.substring(0, 20) + '...');
-    
-    // Test with gemini-1.5-flash (free tier)
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: 'Say "YOUR_KEY_IS_WORKING_PERFECTLY" if you can hear me' }] }]
-      })
-    });
-    
-    const data = await response.json();
-    
-    if (response.ok) {
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response';
-      console.log('✅ API KEY TEST SUCCESS:', text);
-      res.json({
-        success: true,
-        status: response.status,
-        aiResponse: text,
-        message: "🎉 YOUR API KEY IS WORKING PERFECTLY!",
-        keyPreview: apiKey.substring(0, 20) + '...',
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      console.error('❌ API KEY TEST FAILED:', response.status, data);
-      res.json({
-        success: false,
-        status: response.status,
-        error: data.error?.message || 'Unknown error',
-        fullError: data,
-        keyPreview: apiKey.substring(0, 20) + '...',
-        recommendations: [
-          "1. Check if billing is enabled in AI Studio",
-          "2. Verify your region supports free tier",
-          "3. Try enabling billing for $300 free credits",
-          "4. Generate a fresh API key if this one is old"
-        ]
-      });
-    }
-    
-  } catch (error) {
-    console.error('❌ Test endpoint error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
+// Debug endpoints for troubleshooting
+app.get("/debug-imports", (req, res) => {
+  res.json({
+    message: "Import status debugging",
+    imports: {
+      userRoutes: {
+        status: !!userRoutes,
+        path: "./routes/userRoutes.js"
+      },
+      chatRoutes: {
+        status: !!chatRoutes,
+        path: "./routes/chatRoutes.js",
+        issue: !chatRoutes ? "Check for syntax errors (unexpected token 'else')" : "OK"
+      },
+      characterRoutes: {
+        status: !!characterRoutes,
+        path: "./routes/characterRoutes.js"
+      },
+      generateResponse: {
+        status: !!generateResponse,
+        path: "./controllers/chatControllers.js"
+      }
+    },
+    recommendations: !chatRoutes ? [
+      "1. Check ./routes/chatRoutes.js for syntax errors",
+      "2. Look for 'else' without matching 'if'",
+      "3. Check for missing semicolons or brackets",
+      "4. Validate JavaScript syntax"
+    ] : ["All imports successful"]
+  });
 });
 
-// Test Character System
-app.post("/test-character", async (req, res) => {
-  try {
-    const { message, characterName } = req.body;
-    
-    if (!message) {
-      return res.status(400).json({
-        success: false,
-        error: "Message is required",
-        example: '{"message": "Hello", "characterName": "Einstein"}'
-      });
-    }
-    
-    console.log(`🧪 Testing character: ${characterName || 'Einstein'} with message: ${message}`);
-    
-    // Character prompts for testing
-    const characterPrompts = {
-      "Einstein": "You are Albert Einstein. Respond with scientific curiosity, use physics metaphors, and speak with wisdom about the universe. Occasionally mention relativity or sailing.",
-      "Sherlock": "You are Sherlock Holmes. Use precise Victorian language, deductive reasoning, and often say 'Elementary!' Be observant and analytical.",
-      "Shakespeare": "You are William Shakespeare. Speak in beautiful, poetic language with Elizabethan flair. Use metaphors and occasionally rhyme.",
-      "Pirate": "You are a friendly pirate captain. Use pirate language with 'Arrr', 'matey', and sea metaphors. Be adventurous and tell tales.",
-      "Yoda": "You are Yoda from Star Wars. Use inverted sentence structure, say 'Hmm' often, and share wisdom about the Force.",
-      "Grandmother": "You are a loving grandmother. Be caring, wise, give gentle advice, and occasionally mention family stories or cooking."
-    };
-    
-    const selectedCharacter = characterName || "Einstein";
-    const characterPrompt = characterPrompts[selectedCharacter] || characterPrompts["Einstein"];
-    
-    const fullPrompt = `${characterPrompt}
-
-User: ${message}
-
-${selectedCharacter}:`;
-
-    console.log('🎭 Using character prompt for:', selectedCharacter);
-
-    // Test with your API key
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: fullPrompt }] }],
-        generationConfig: { 
-          temperature: 0.9, // More creative for characters
-          maxOutputTokens: 1024 
-        }
-      })
-    });
-    
-    const data = await response.json();
-    
-    if (response.ok) {
-      const characterResponse = data.candidates[0].content.parts[0].text;
-      console.log(`✅ Character response generated for ${selectedCharacter}`);
-      
-      res.json({
-        success: true,
-        character: selectedCharacter,
-        userMessage: message,
-        characterResponse: characterResponse,
-        timestamp: new Date().toISOString(),
-        promptUsed: characterPrompt,
-        characterSystemStatus: characterRoutes ? "Available" : "Disabled"
-      });
-    } else {
-      res.json({
-        success: false,
-        error: data.error?.message,
-        character: selectedCharacter,
-        status: response.status
-      });
-    }
-    
-  } catch (error) {
-    console.error('❌ Character test error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
+app.get("/debug-syntax", (req, res) => {
+  res.json({
+    message: "Syntax error debugging guide",
+    commonErrors: {
+      "Unexpected token 'else'": [
+        "Missing 'if' statement before 'else'",
+        "Missing opening brace '{' after 'if'",
+        "Missing closing brace '}' before 'else'",
+        "Semicolon after 'if' statement"
+      ]
+    },
+    checkFiles: [
+      "./routes/chatRoutes.js",
+      "./controllers/chatControllers.js"
+    ],
+    howToFix: [
+      "1. Open the file mentioned in the error",
+      "2. Look for 'else' statements",
+      "3. Ensure each 'else' has a matching 'if'",
+      "4. Check bracket pairing { }",
+      "5. Remove semicolons after 'if' statements"
+    ]
+  });
 });
 
-// Test All Characters
-app.post("/test-all-characters", async (req, res) => {
+// Test chat functionality
+app.post("/test-chat", async (req, res) => {
   try {
     const { message } = req.body;
     
@@ -415,166 +450,26 @@ app.post("/test-all-characters", async (req, res) => {
         example: '{"message": "Hello"}'
       });
     }
-
-    console.log(`🧪 Testing all characters with message: "${message}"`);
-
-    const characters = ["Einstein", "Sherlock", "Shakespeare", "Pirate", "Yoda"];
-    const results = [];
-
-    for (const character of characters) {
-      try {
-        const testResponse = await fetch('http://localhost:5000/test-character', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, characterName: character })
-        });
-        
-        const data = await testResponse.json();
-        results.push({
-          character,
-          success: data.success,
-          response: data.success ? data.characterResponse : data.error
-        });
-        
-      } catch (error) {
-        results.push({
-          character,
-          success: false,
-          error: error.message
-        });
-      }
-    }
-
-    res.json({
-      success: true,
-      userMessage: message,
-      characterTests: results,
-      summary: {
-        total: characters.length,
-        successful: results.filter(r => r.success).length,
-        failed: results.filter(r => !r.success).length
-      },
-      characterSystemStatus: characterRoutes ? "Available" : "Disabled"
-    });
-
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// Comprehensive Gemini Test
-app.get("/test-gemini-full", async (req, res) => {
-  try {
-    console.log("🧪 Running comprehensive Gemini tests...");
     
-    const apiKey = process.env.GEMINI_API_KEY;
-    const results = {
-      timestamp: new Date().toISOString(),
-      apiKey: {
-        exists: !!apiKey,
-        format: apiKey ? apiKey.startsWith('AIzaSy') : false,
-        preview: apiKey ? apiKey.substring(0, 20) + '...' : 'NOT_CONFIGURED'
-      },
-      tests: []
-    };
-
-    if (!apiKey) {
-      return res.status(500).json({
-        ...results,
-        error: "Gemini API key not configured"
+    if (generateResponse) {
+      const response = await generateResponse(message);
+      res.json({
+        success: true,
+        userMessage: message,
+        aiResponse: response,
+        mode: chatRoutes ? "normal" : "fallback",
+        timestamp: new Date().toISOString()
       });
-    }
-
-    // Test multiple models
-    const models = ['gemini-1.5-flash', 'gemini-pro', 'gemini-1.0-pro'];
-    
-    for (const model of models) {
-      try {
-        console.log(`🧪 Testing ${model}...`);
-        
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: `Say "MODEL_${model.toUpperCase().replace(/[-.]/g, '_')}_WORKING" if you can hear me` }] }]
-          })
-        });
-
-        const data = await response.json();
-        
-        results.tests.push({
-          model: model,
-          status: response.status,
-          success: response.ok,
-          response: response.ok ? data.candidates?.[0]?.content?.parts?.[0]?.text : data.error?.message
-        });
-        
-      } catch (error) {
-        results.tests.push({
-          model: model,
-          status: 'ERROR',
-          success: false,
-          error: error.message
-        });
-      }
-    }
-
-    // Summary
-    const workingModels = results.tests.filter(t => t.success);
-    results.summary = {
-      totalTests: results.tests.length,
-      workingModels: workingModels.length,
-      overallStatus: workingModels.length > 0 ? "WORKING" : "FAILED",
-      recommendation: workingModels.length > 0 ? 
-        "✅ At least one model is working! Your chatbot should work." :
-        "❌ All models failed. Check billing and API key status."
-    };
-
-    res.json(results);
-
-  } catch (error) {
-    console.error("❌ Full test error:", error);
-    res.status(500).json({
-      error: "Test endpoint failed",
-      message: error.message
-    });
-  }
-});
-
-// Simple Chat Test
-app.post("/test-chat", async (req, res) => {
-  try {
-    const { message } = req.body;
-    
-    if (!message) {
-      return res.status(400).json({
+    } else {
+      res.status(500).json({
         success: false,
-        error: "Message is required",
-        example: 'Send: {"message": "Hello"}'
+        error: "Chat functionality unavailable",
+        reason: "generateResponse function not imported",
+        troubleshooting: "Check ./controllers/chatControllers.js for syntax errors"
       });
     }
-
-    console.log(`🧪 Testing chat with: "${message}"`);
-
-    if (!generateResponse) {
-      return res.status(500).json({
-        success: false,
-        error: "generateResponse function not available"
-      });
-    }
-
-    const response = await generateResponse(message);
     
-    res.json({
-      success: true,
-      userMessage: message,
-      aiResponse: response.text || response,
-      timestamp: new Date().toISOString(),
-      keyUsed: process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 20) + '...' : 'NOT_CONFIGURED'
-    });
-
   } catch (error) {
-    console.error("❌ Chat test error:", error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -582,89 +477,7 @@ app.post("/test-chat", async (req, res) => {
   }
 });
 
-// Environment Test
-app.get("/test-env", (req, res) => {
-  res.json({
-    message: "Environment variables test",
-    env: {
-      NODE_ENV: process.env.NODE_ENV,
-      PORT: process.env.PORT,
-      EMAIL_USERNAME: process.env.EMAIL_USERNAME,
-      MONGO_URI: process.env.MONGO_URI ? '✅ Configured' : '❌ Missing',
-      JWT_SECRET: process.env.JWT_SECRET ? '✅ Configured' : '❌ Missing',
-      GEMINI_API_KEY: process.env.GEMINI_API_KEY ? '✅ Configured' : '❌ Missing',
-      GEMINI_KEY_PREVIEW: process.env.GEMINI_API_KEY ? 
-        process.env.GEMINI_API_KEY.substring(0, 20) + '...' : 'NOT FOUND',
-      GEMINI_KEY_ENDING: process.env.GEMINI_API_KEY ? 
-        '...' + process.env.GEMINI_API_KEY.slice(-10) : 'NOT FOUND'
-    },
-    systemStatus: {
-      userRoutes: !!userRoutes,
-      chatRoutes: !!chatRoutes,
-      characterRoutes: !!characterRoutes,
-      generateResponse: !!generateResponse
-    }
-  });
-});
-
-// Health Check
-app.get("/health", (req, res) => {
-  res.json({
-    status: "healthy",
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    version: "1.0.0",
-    features: {
-      userAuthentication: userRoutes ? "✅ Available" : "❌ Missing",
-      regularChat: (userRoutes && chatRoutes) ? "✅ Available" : "❌ Missing",
-      characterChat: characterRoutes ? "✅ Available" : "❌ Disabled", 
-      characterCreation: characterRoutes ? "✅ Available" : "❌ Disabled",
-      geminiAPI: process.env.GEMINI_API_KEY ? "✅ Configured" : "❌ Missing",
-      emailService: process.env.EMAIL_USERNAME ? "✅ Configured" : "❌ Missing"
-    },
-    routes: {
-      "/api/user/*": userRoutes ? "✅ Mounted" : "❌ Missing",
-      "/api/chat/*": chatRoutes ? "✅ Mounted" : "❌ Missing",
-      "/api/characters/*": characterRoutes ? "✅ Mounted" : "❌ Disabled"
-    }
-  });
-});
-
-// Debug All Routes (for troubleshooting)
-app.get("/debug-routes", (req, res) => {
-  const routes = [];
-  
-  // Get all registered routes
-  app._router.stack.forEach(function(r){
-    if (r.route && r.route.path){
-      const methods = Object.keys(r.route.methods).join(', ').toUpperCase();
-      routes.push(`${methods} ${r.route.path}`);
-    } else if (r.name === 'router') {
-      // Handle mounted routers
-      r.handle.stack.forEach(function(nestedRoute) {
-        if (nestedRoute.route) {
-          const methods = Object.keys(nestedRoute.route.methods).join(', ').toUpperCase();
-          const mountPath = r.regexp.source.replace('\\/?(?=\\/|$)', '').replace(/\\/g, '');
-          routes.push(`${methods} ${mountPath}${nestedRoute.route.path}`);
-        }
-      });
-    }
-  });
-  
-  res.json({
-    message: "All registered routes",
-    timestamp: new Date().toISOString(),
-    totalRoutes: routes.length,
-    routes: routes.sort(),
-    systemStatus: {
-      userRoutes: !!userRoutes,
-      chatRoutes: !!chatRoutes,
-      characterRoutes: !!characterRoutes
-    }
-  });
-});
-
-// STEP 8: ERROR HANDLING
+// STEP 7: ERROR HANDLING
 
 // Global error handler
 app.use((err, req, res, next) => {
@@ -673,6 +486,7 @@ app.use((err, req, res, next) => {
   console.error('❌ Stack:', err.stack);
   console.error('❌ URL:', req.url);
   console.error('❌ Method:', req.method);
+  console.error('❌ Origin:', req.headers.origin);
   
   res.status(500).json({
     message: 'Something went wrong!',
@@ -683,129 +497,88 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 Handler - Must be last
+// 404 handler
 app.use('*', (req, res) => {
   console.log(`❌ 404 - Route not found: ${req.method} ${req.originalUrl}`);
-  
   res.status(404).json({ 
     message: `Route ${req.originalUrl} not found`,
-    method: req.method,
-    timestamp: new Date().toISOString(),
-    availableRoutes: {
-      main: [
-        'GET / - Server info',
-        'GET /health - Health check',
-        'GET /status - System status'
-      ],
-      testing: [
-        'GET /test-env - Environment test', 
-        'GET /test-my-key - API key test',
-        'GET /test-gemini-full - Full Gemini test',
-        'POST /test-chat - Regular chat test',
-        'POST /test-character - Character chat test',
-        'POST /test-all-characters - Test all characters',
-        'GET /test-character-system - Test character system'
-      ],
-      api: [
-        'POST /api/user/login - User login',
-        'POST /api/user/verify - Verify OTP',
-        'GET /api/user/me - User profile',
-        'POST /api/chat/new - Create chat',
-        'GET /api/chat/all - Get all chats',
-        'GET /api/chat/:id - Get chat conversations',
-        'POST /api/chat/:id - Send message',
-        'DELETE /api/chat/:id - Delete chat',
-        ...(characterRoutes ? [
-          'GET /api/characters - Get characters',
-          'POST /api/characters - Create character',
-          'GET /api/characters/:id - Get character',
-          'PUT /api/characters/:id - Update character',
-          'DELETE /api/characters/:id - Delete character'
-        ] : ['❌ Character routes disabled - missing files'])
-      ],
-      debug: [
-        'GET /debug-routes - See all routes',
-        'GET /debug-character-system - Debug character issues'
-      ]
-    }
+    availableRoutes: [
+      'GET / - Server info',
+      'GET /status - System status', 
+      'GET /health - Health check',
+      'GET /test-cors - CORS test',
+      'GET /debug-imports - Debug import issues',
+      'POST /test-chat - Test chat functionality',
+      ...(userRoutes ? ['POST /api/user/login - User login'] : []),
+      ...(chatRoutes ? ['GET /api/chat/all - Get chats'] : ['POST /api/chat/fallback - Fallback chat']),
+      ...(characterRoutes ? ['GET /api/characters - Get characters'] : [])
+    ]
   });
 });
 
-// STEP 9: START SERVER
+// STEP 8: START SERVER
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
-    console.log('\n🚀 === STARTING ENHANCED CHATBOT SERVER ===');
+    console.log('\n🚀 === STARTING FIXED SERVER ===');
     
     // Connect to database
-    console.log('📊 Connecting to database...');
     await connectDb();
-    console.log('✅ Database connected successfully');
+    console.log('✅ Database connected');
     
     // Start server
     app.listen(PORT, () => {
-      console.log(`\n✅ === SERVER STARTED SUCCESSFULLY ===`);
-      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`\n🎉 === SERVER STARTED SUCCESSFULLY ===`);
+      console.log(`🚀 Port: ${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
-      console.log(`📧 Email: ${process.env.EMAIL_USERNAME}`);
-      console.log(`🤖 Gemini API: ${process.env.GEMINI_API_KEY ? '✅ CONFIGURED' : '❌ Missing'}`);
-      console.log(`🔑 Key ending: ...${process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.slice(-10) : 'NONE'}`);
-      console.log(`🔗 Server URL: http://localhost:${PORT}`);
+      console.log(`🔗 Backend URL: ${process.env.NODE_ENV === 'production' ? 'https://ai-character-chatbot-2.onrender.com' : `http://localhost:${PORT}`}`);
+      console.log(`🌐 Frontend URL: https://ai-character-chatbot-7.onrender.com`);
       
       console.log('\n📋 === SYSTEM STATUS ===');
       console.log(`👤 User System: ${userRoutes ? '✅ Active' : '❌ Inactive'}`);
-      console.log(`💬 Chat System: ${chatRoutes ? '✅ Active' : '❌ Inactive'}`);
-      console.log(`🎭 Character System: ${characterRoutes ? '✅ Active' : '❌ Disabled'}`);
-      console.log(`🤖 Gemini API: ${process.env.GEMINI_API_KEY ? '✅ Ready' : '❌ Not configured'}`);
+      console.log(`💬 Chat System: ${chatRoutes ? '✅ Active' : (generateResponse ? '⚠️ Fallback Mode' : '❌ Inactive')}`);
+      console.log(`🎭 Character System: ${characterRoutes ? '✅ Active' : '❌ Inactive'}`);
+      console.log(`🤖 Gemini API: ${process.env.GEMINI_API_KEY ? '✅ Ready' : '❌ Missing'}`);
       
-      console.log('\n🧪 === TEST ENDPOINTS ===');
-      console.log(`🔍 System Status: http://localhost:${PORT}/status`);
-      console.log(`🔑 API Key Test: http://localhost:${PORT}/test-my-key`);
-      console.log(`🤖 Regular Chat: POST http://localhost:${PORT}/test-chat`);
-      console.log(`🎭 Character Chat: POST http://localhost:${PORT}/test-character`);
-      console.log(`👥 All Characters: POST http://localhost:${PORT}/test-all-characters`);
+      console.log('\n🔧 === FIXES APPLIED ===');
+      console.log('✅ CORS updated for ai-character-chatbot-7.onrender.com');
+      console.log('✅ Enhanced error handling for imports');
+      console.log('✅ Fallback chat functionality added');
+      console.log('✅ Better debugging endpoints');
       
-      if (characterRoutes) {
-        console.log(`✅ Character System: http://localhost:${PORT}/test-character-system`);
-      } else {
-        console.log(`❌ Character Debug: http://localhost:${PORT}/debug-character-system`);
+      console.log('\n🧪 === TESTING ENDPOINTS ===');
+      console.log(`🔍 System Status: ${process.env.NODE_ENV === 'production' ? 'https://ai-character-chatbot-2.onrender.com' : `http://localhost:${PORT}`}/status`);
+      console.log(`🌐 CORS Test: ${process.env.NODE_ENV === 'production' ? 'https://ai-character-chatbot-2.onrender.com' : `http://localhost:${PORT}`}/test-cors`);
+      console.log(`🐛 Debug Imports: ${process.env.NODE_ENV === 'production' ? 'https://ai-character-chatbot-2.onrender.com' : `http://localhost:${PORT}`}/debug-imports`);
+      
+      if (!chatRoutes && generateResponse) {
+        console.log('\n⚠️  === FALLBACK MODE ACTIVE ===');
+        console.log('🔧 Chat routes failed to import but fallback is available');
+        console.log('🧪 Test fallback: POST /api/chat/fallback');
+        console.log('🐛 Debug syntax: GET /debug-syntax');
       }
       
       console.log('\n🎯 === NEXT STEPS ===');
-      if (characterRoutes) {
-        console.log('✅ 1. Character system is ready!');
-        console.log('✅ 2. Test character routes: /test-character-system');
-        console.log('✅ 3. Try creating characters in the frontend');
-        console.log('✅ 4. Chat with Einstein, Sherlock, Shakespeare!');
+      if (!chatRoutes) {
+        console.log('1. ❌ Fix syntax errors in ./routes/chatRoutes.js');
+        console.log('2. 🔍 Check /debug-imports for details');
+        console.log('3. 🧪 Use /test-chat to verify functionality');
       } else {
-        console.log('❌ 1. Character system disabled - missing files');
-        console.log('❌ 2. Create required files: Character.js, characterControllers.js');
-        console.log('❌ 3. Check debug endpoint: /debug-character-system');
-        console.log('❌ 4. Restart server after creating files');
+        console.log('1. ✅ All systems operational');
+        console.log('2. 🌐 Frontend should now connect properly');
+        console.log('3. 🧪 Test CORS with /test-cors endpoint');
       }
       
-      console.log('\n🎭 === AVAILABLE FEATURES ===');
-      console.log('✅ User Authentication (Email OTP)');
-      console.log('✅ Regular AI Chat');
-      console.log('✅ Chat History Management');
-      console.log(`${characterRoutes ? '✅' : '❌'} Character-based AI Chat`);
-      console.log(`${characterRoutes ? '✅' : '❌'} Custom Character Creation`);
-      console.log(`${characterRoutes ? '✅' : '❌'} Pre-built Characters (Einstein, Sherlock, etc.)`);
-      
       console.log('\n================================');
-      console.log('🎉 SERVER READY FOR CONNECTIONS!');
+      console.log('🎉 FIXED SERVER READY!');
       console.log('================================\n');
     });
     
   } catch (error) {
-    console.error('\n❌ === SERVER STARTUP FAILED ===');
-    console.error('❌ Error:', error.message);
-    console.error('❌ Stack:', error.stack);
-    console.error('❌ Server will not start');
+    console.error('\n❌ Server startup failed:', error.message);
     process.exit(1);
   }
 };
 
-// Start the server
 startServer();

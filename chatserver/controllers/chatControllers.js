@@ -1,255 +1,166 @@
-// FIXED controllers/chatControllers.js - CHARACTER SUPPORT ADDED
+// controllers/chatControllers.js - FIXED SYNTAX AND DEPLOYMENT READY
 import { Chat } from "../models/Chat.js";
 import { Conversation } from "../models/Conversation.js";
 import { Character } from "../models/Character.js";
-import { createDefaultCharacters } from "./characterControllers.js";
 
-console.log('🤖 Initializing FREE TIER Gemini Chat Controller WITH CHARACTER SUPPORT');
-console.log('🔑 API Key configured:', !!process.env.GEMINI_API_KEY);
+console.log('🤖 Enhanced Chat Controller Loading...');
 
-// ==========================================
-// ENHANCED GEMINI API WITH CHARACTER SUPPORT
-// ==========================================
-// ADD this function to your controllers/chatControllers.js (before generateResponse function)
-
-const filterResponseToSpeechOnly = (text) => {
-  if (!text) return text;
-  
-  // Remove common narrative patterns
-  let cleaned = text
-    // Remove text in parentheses like "(Einstein smiles)" 
-    .replace(/\([^)]*\)/g, '')
-    // Remove text in asterisks like "*nods thoughtfully*"
-    .replace(/\*[^*]*\*/g, '')
-    // Remove text in square brackets like "[gestures]"
-    .replace(/\[[^\]]*\]/g, '')
-    // Remove stage direction patterns
-    .replace(/^[A-Z][a-z]+ (nods|smiles|gestures|looks|speaks|says)[^.]*\./gm, '')
-    // Remove narrative beginnings like "Einstein thoughtfully considers..."
-    .replace(/^[A-Z][a-z]+ (thoughtfully|carefully|slowly|quietly) [a-z]+[^.]*\./gm, '')
-    // Remove action descriptions that end sentences
-    .replace(/,\s*(nodding|smiling|gesturing)[^.]*\./g, '.')
-    // Clean up extra spaces and newlines
-    .replace(/\s+/g, ' ')
-    .replace(/^\s+|\s+$/g, '')
-    // Remove empty lines
-    .replace(/\n\s*\n/g, '\n')
-    .trim();
-  
-  return cleaned;
-};
-
-// ALSO UPDATE the generateResponse function to use this filter: 
-// REPLACE the generateResponse function in controllers/chatControllers.js
-
+// Enhanced AI Response Generation with realistic character support
 const generateResponse = async (userMessage, characterId = null) => {
-  console.log('🤖 === GENERATING AI RESPONSE ===');
-  console.log('📝 User message:', userMessage);
-  console.log('🎭 Character ID:', characterId || 'Regular AI');
+  console.log('🤖 Generating realistic response for:', userMessage);
+  console.log('🎭 Character ID:', characterId || 'None');
   
   const apiKey = process.env.GEMINI_API_KEY;
   
   if (!apiKey) {
-    console.error('❌ No API key found');
     throw new Error('Gemini API key not configured');
   }
 
   let finalPrompt = userMessage;
   let characterName = "AI Assistant";
+  let conversationContext = "";
 
-  // FETCH CHARACTER IF PROVIDED
+  // Handle character-based prompts for realistic responses
   if (characterId) {
     try {
       const character = await Character.findById(characterId);
       if (character) {
-        console.log(`🎭 Using character: ${character.name}`);
         characterName = character.name;
         
-        // CREATE CHARACTER-SPECIFIC PROMPT WITH SPEECH-ONLY INSTRUCTION
-        finalPrompt = `${character.systemPrompt}
+        // Enhanced context for more realistic responses
+        conversationContext = `You are having a natural conversation as ${character.name}. The user just said: "${userMessage}"
 
-ADDITIONAL INSTRUCTION: Respond ONLY with direct speech. No action descriptions, no narrative text, no stage directions.
+${character.systemPrompt}
 
-User: ${userMessage}
+ENHANCED REALISM INSTRUCTIONS:
+- Respond as ${character.name} would ACTUALLY speak in real life
+- Use your authentic knowledge, memories, and perspectives as ${character.name}
+- Reference your real experiences, work, and background naturally when relevant
+- Show your personality through word choice, tone, and conversation style
+- If speaking in Hindi/Bengali, use proper script and natural expressions
+- Don't be overly formal unless that's your character - be authentically yourself
+- React to the user's message in a way that shows you're listening and engaged
 
-${character.name}:`;
+User's message: ${userMessage}
 
-        console.log('🎭 Character prompt created for:', character.name);
+${character.name}'s response:`;
+
+        finalPrompt = conversationContext;
         
-        // INCREMENT CHARACTER USAGE
+        // Update character usage
         await Character.findByIdAndUpdate(characterId, { 
           $inc: { usageCount: 1 } 
         });
-      } else {
-        console.log('⚠️ Character not found, using regular AI');
       }
     } catch (error) {
-      console.error('❌ Error fetching character:', error);
-      console.log('⚠️ Falling back to regular AI');
+      console.error('Character fetch error:', error);
     }
   } else {
-    // Add speech-only instruction for regular AI too
-    finalPrompt = `You are a helpful AI assistant. Respond naturally and conversationally.
+    // Enhanced regular AI prompt
+    finalPrompt = `You are a helpful, knowledgeable AI assistant. Respond naturally and conversationally to: "${userMessage}"
 
-IMPORTANT: Respond ONLY with your direct speech. Do not include any action descriptions, stage directions, or narrative text.
+LANGUAGE SUPPORT:
+- Respond in English primarily
+- If the user writes in Hindi (Devanagari) or Bengali, respond naturally in that language
+- Use proper grammar and natural expressions for each language
+- You can mix languages naturally if appropriate (like Hinglish)
 
 User: ${userMessage}
-${character.name}:`;
 
-        console.log('🎭 Character prompt created for:', character.name);
-        
-        // INCREMENT CHARACTER USAGE
-        await Character.findByIdAndUpdate(characterId, { 
-          $inc: { usageCount: 1 } 
-        });
-      } else {
-        console.log('⚠️ Character not found, using regular AI');
-      }
-    } catch (error) {
-      console.error('❌ Error fetching character:', error);
-      console.log('⚠️ Falling back to regular AI');
-    }
+Response:`;
   }
 
-  console.log('📤 Final prompt length:', finalPrompt.length);
-
-  // FREE TIER COMPATIBLE MODELS
-  const freeModels = [
-    'gemini-1.5-flash',
-    'gemini-pro',
-    'gemini-1.0-pro'
-  ];
-
-  for (const modelName of freeModels) {
+  // Try Gemini models with enhanced settings for realistic responses
+  const models = ['gemini-1.5-flash', 'gemini-pro'];
+  
+  for (const model of models) {
     try {
-      console.log(`🔧 Trying model: ${modelName}`);
-      
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-      
-      const requestBody = {
-        contents: [{
-          parts: [{
-            text: finalPrompt
-          }]
-        }],
-        generationConfig: {
-          temperature: characterId ? 0.9 : 0.7, // More creative for characters
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        },
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_HATE_SPEECH", 
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
-      };
-
-      const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: finalPrompt }] }],
+          generationConfig: { 
+            temperature: 0.8, // Slightly higher for more natural responses
+            maxOutputTokens: 1024,
+            topP: 0.95, // For more natural language generation
+            topK: 40
+          },
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_DANGEROUS_CONTENT", 
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            }
+          ]
+        })
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ ${modelName} error:`, response.status, errorText);
-        continue;
+      if (response.ok) {
+        const data = await response.json();
+        let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (text) {
+          // Clean up response to ensure it's speech-only
+          text = text
+            .replace(/^\*[^*]*\*/g, '') // Remove action descriptions at start
+            .replace(/\*[^*]*\*/g, '') // Remove any action descriptions
+            .replace(/^\([^)]*\)/g, '') // Remove parenthetical descriptions at start
+            .replace(/\([^)]*\)/g, '') // Remove any parenthetical descriptions
+            .replace(/^\[[^\]]*\]/g, '') // Remove stage directions at start
+            .replace(/\[[^\]]*\]/g, '') // Remove any stage directions
+            .replace(/^[^:]*:\s*/, '') // Remove "Character:" prefix if present
+            .trim();
+          
+          return {
+            text: text,
+            characterUsed: characterName,
+            model: model
+          };
+        }
+      } else {
+        console.error(`${model} HTTP error:`, response.status, await response.text());
       }
-
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-      if (!text || text.trim().length === 0) {
-        console.error(`❌ No text content in ${modelName} response`);
-        continue;
-      }
-
-      console.log(`✅ SUCCESS with ${modelName}`);
-      console.log(`🎭 Response as: ${characterName}`);
-      console.log('📝 Response preview:', text.substring(0, 100) + '...');
-      
-      return {
-        text: text,
-        characterUsed: characterName,
-        model: modelName
-      };
-
     } catch (error) {
-      console.error(`❌ ${modelName} error:`, error.message);
-      continue;
+      console.error(`${model} error:`, error.message);
     }
   }
 
-  throw new Error('All AI models failed');
+  throw new Error('All AI models failed to generate response');
 };
 
-// Create new chat (ENHANCED)
+// Create new chat
 export const createChat = async (req, res) => {
   try {
-    console.log("📝 CREATE CHAT - Starting...");
+    console.log("📝 Creating new chat...");
     
     const userId = req.user._id;
     const { characterId, title } = req.body;
-    
-    console.log(`➕ Creating chat for user: ${userId}`);
-    console.log(`🎭 Character ID: ${characterId || 'None (Regular AI)'}`);
 
-    // Prepare chat data
     const chatData = {
       user: userId,
       latestMessage: "New Chat",
+      title: title || "New Chat"
     };
 
-    // Add character if provided
     if (characterId) {
       chatData.character = characterId;
       
-      // Try to get character name for title
       try {
         const character = await Character.findById(characterId);
         if (character) {
           chatData.title = title || `Chat with ${character.name}`;
-          chatData.metadata = {
-            characterName: character.name
-          };
-          console.log(`🎭 Character chat with: ${character.name}`);
         }
       } catch (error) {
-        console.error('Error fetching character for title:', error);
-        chatData.title = title || "Character Chat";
+        console.error('Character lookup error:', error);
       }
-    } else {
-      chatData.title = title || "New Chat";
     }
 
     const chat = await Chat.create(chatData);
-    console.log(`✅ Chat created: ${chat._id}`);
-
-    // Create default characters for new users
-    if (!characterId) {
-      try {
-        await createDefaultCharacters(userId);
-      } catch (error) {
-        console.log('⚠️ Default characters creation failed:', error.message);
-      }
-    }
-
+    
     res.status(201).json({
       message: "Chat created successfully",
       chat: chat,
@@ -257,24 +168,23 @@ export const createChat = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ CREATE CHAT ERROR:", error);
+    console.error("❌ Create chat error:", error);
     res.status(500).json({
       message: "Failed to create chat",
-      error: process.env.NODE_ENV === 'development' ? error.message : "Internal server error"
+      error: error.message
     });
   }
 };
 
-// Get all chats for user (ENHANCED)
+// Get all chats
 export const getAllChats = async (req, res) => {
   try {
-    console.log("📚 GET ALL CHATS - Starting...");
+    console.log("📚 Fetching all chats...");
     
     const userId = req.user._id;
-    console.log(`📚 Fetching chats for user: ${userId}`);
-
+    
     const chats = await Chat.find({ user: userId })
-      .populate('character', 'name avatar description')
+      .populate('character', 'name avatar description personality speakingStyle')
       .sort({ updatedAt: -1 });
     
     console.log(`✅ Found ${chats.length} chats`);
@@ -285,68 +195,60 @@ export const getAllChats = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ GET ALL CHATS ERROR:", error);
+    console.error("❌ Get chats error:", error);
     res.status(500).json({
       message: "Failed to fetch chats",
-      error: process.env.NODE_ENV === 'development' ? error.message : "Internal server error"
+      error: error.message
     });
   }
 };
 
-// Add conversation to chat (ENHANCED WITH CHARACTER SUPPORT)
+// Add conversation with enhanced character response
 export const addConversation = async (req, res) => {
   try {
-    console.log("💬 ADD CONVERSATION - Starting...");
+    console.log("💬 Adding conversation with enhanced character support...");
     
     const { question, characterId } = req.body;
     const chatId = req.params.id;
     const userId = req.user._id;
 
-    console.log(`💬 Chat: ${chatId}`);
-    console.log(`📝 Question: ${question}`);
-    console.log(`🎭 Character ID: ${characterId || 'None'}`);
-
-    if (!question || question.trim().length === 0) {
+    if (!question || !question.trim()) {
       return res.status(400).json({ message: "Question is required" });
     }
 
-    // Find chat and verify ownership
+    // Find chat with character information
     const chat = await Chat.findOne({ _id: chatId, user: userId })
-      .populate('character', 'name avatar systemPrompt');
+      .populate('character');
     
     if (!chat) {
-      console.log(`❌ Chat not found: ${chatId}`);
       return res.status(404).json({ message: "Chat not found" });
     }
 
-    // Determine which character to use
-    let useCharacterId = characterId || chat.character?._id;
-    
+    // Use character from request or chat
+    const useCharacterId = characterId || chat.character?._id;
     console.log(`🎭 Using character: ${useCharacterId ? 'Yes' : 'No'}`);
 
     try {
-      console.log("🤖 Generating AI response...");
-      
-      // ENHANCED: Generate response with character support
+      // Generate enhanced AI response
       const aiResult = await generateResponse(question.trim(), useCharacterId);
       
-      console.log("✅ AI response generated successfully");
-      console.log(`🎭 Response from: ${aiResult.characterUsed}`);
+      console.log(`✅ Generated response from: ${aiResult.characterUsed}`);
       
-      // Create conversation entry
+      // Save conversation
       const conversation = await Conversation.create({
         chat: chatId,
         question: question.trim(),
         answer: aiResult.text,
       });
 
-      // Update chat's latest message
-      const latestMessage = question.length > 50 ? 
-        question.substring(0, 50) + "..." : 
-        question;
+      // Update chat with better preview
+      const previewLength = 60;
+      const questionPreview = question.length > previewLength 
+        ? question.substring(0, previewLength) + "..." 
+        : question;
 
       await Chat.findByIdAndUpdate(chatId, {
-        latestMessage: latestMessage,
+        latestMessage: questionPreview,
         updatedAt: new Date(),
         $inc: { messageCount: 1 }
       });
@@ -363,25 +265,21 @@ export const addConversation = async (req, res) => {
       });
 
     } catch (aiError) {
-      console.error("❌ AI generation failed:", aiError.message);
+      console.error("AI error:", aiError);
       
-      // Provide helpful user-facing error messages
-      let fallbackResponse;
-      if (aiError.message.includes('All AI models failed')) {
-        fallbackResponse = "🔄 AI Service Temporarily Unavailable: I'm having technical difficulties. Please try again in a moment.";
-      } else {
-        fallbackResponse = "⚡ I'm having trouble generating a response right now. Please try again.";
-      }
-
-      // Save conversation with fallback response
+      // Fallback response
+      const fallbackMessage = chat.character 
+        ? `I apologize, but I'm having trouble generating a response as ${chat.character.name}. Please try again.`
+        : "I'm having trouble generating a response. Please try again.";
+      
       const conversation = await Conversation.create({
         chat: chatId,
         question: question.trim(),
-        answer: fallbackResponse,
+        answer: fallbackMessage,
       });
 
       res.status(201).json({
-        message: "Message saved with fallback response",
+        message: "Message saved with fallback",
         _id: conversation._id,
         chat: conversation.chat,
         question: conversation.question,
@@ -393,24 +291,24 @@ export const addConversation = async (req, res) => {
     }
 
   } catch (error) {
-    console.error("❌ ADD CONVERSATION ERROR:", error);
+    console.error("❌ Add conversation error:", error);
     res.status(500).json({
       message: "Failed to send message",
-      error: process.env.NODE_ENV === 'development' ? error.message : "Internal server error"
+      error: error.message
     });
   }
 };
 
-// Get conversations for a chat (ENHANCED)
+// Get conversations with character context
 export const getConversation = async (req, res) => {
   try {
-    console.log("💬 GET CONVERSATION - Starting...");
+    console.log("💬 Getting conversations...");
     
     const chatId = req.params.id;
     const userId = req.user._id;
 
     const chat = await Chat.findOne({ _id: chatId, user: userId })
-      .populate('character', 'name avatar description');
+      .populate('character', 'name avatar description personality speakingStyle primaryLanguage expertise');
     
     if (!chat) {
       return res.status(404).json({ message: "Chat not found" });
@@ -419,31 +317,29 @@ export const getConversation = async (req, res) => {
     const conversations = await Conversation.find({ chat: chatId })
       .sort({ createdAt: 1 });
 
-    console.log(`✅ Found ${conversations.length} conversations`);
-
     res.json({
       conversations: conversations,
       count: conversations.length,
       chatInfo: {
         character: chat.character,
         title: chat.title,
-        chatType: chat.chatType
+        chatType: chat.character ? 'character' : 'regular'
       }
     });
 
   } catch (error) {
-    console.error("❌ GET CONVERSATION ERROR:", error);
+    console.error("❌ Get conversations error:", error);
     res.status(500).json({
       message: "Failed to fetch conversations",
-      error: process.env.NODE_ENV === 'development' ? error.message : "Internal server error"
+      error: error.message
     });
   }
 };
 
-// Delete chat and all its conversations
+// Delete chat
 export const deleteChat = async (req, res) => {
   try {
-    console.log("🗑️ DELETE CHAT - Starting...");
+    console.log("🗑️ Deleting chat...");
     
     const chatId = req.params.id;
     const userId = req.user._id;
@@ -454,22 +350,21 @@ export const deleteChat = async (req, res) => {
       return res.status(404).json({ message: "Chat not found" });
     }
 
-    const deletedConversations = await Conversation.deleteMany({ chat: chatId });
-    console.log(`🗑️ Deleted ${deletedConversations.deletedCount} conversations`);
+    // Delete all conversations first
+    await Conversation.deleteMany({ chat: chatId });
     
+    // Delete the chat
     await Chat.findByIdAndDelete(chatId);
-    console.log(`✅ Chat deleted: ${chatId}`);
 
     res.json({ 
-      message: "Chat deleted successfully",
-      deletedConversations: deletedConversations.deletedCount
+      message: "Chat deleted successfully"
     });
 
   } catch (error) {
-    console.error("❌ DELETE CHAT ERROR:", error);
+    console.error("❌ Delete chat error:", error);
     res.status(500).json({
       message: "Failed to delete chat",
-      error: process.env.NODE_ENV === 'development' ? error.message : "Internal server error"
+      error: error.message
     });
   }
 };
