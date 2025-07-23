@@ -131,10 +131,10 @@ export const UserProvider = ({ children }) => {
       console.log("👤 Fetching user profile...");
 
       const { data } = await axios.get(`${server}/api/user/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
 
       console.log("✅ User profile fetched:", data.email);
       

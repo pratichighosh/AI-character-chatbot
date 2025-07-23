@@ -64,13 +64,13 @@ export const ChatProvider = ({ children }) => {
         console.log("🎭 Sending with character ID:", selectedCharacter._id);
       }
 
-      const response = await axios.post(
-        `${server}/api/chat/${selected}`,
-        requestData,
-        {
-          headers: getAuthHeaders(),
-        }
-      );
+     const response = await axios.post(
+  `${server}/api/chat/${selected}`,
+  requestData,
+  {
+    headers: getAuthHeaders(),
+  }
+);
 
       console.log("✅ AI response received");
       console.log("🎭 Response from:", response.data.characterUsed);
