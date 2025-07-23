@@ -790,6 +790,268 @@ app.post("/test-otp", async (req, res) => {
     });
   }
 });
+// ADD THESE DEBUG ENDPOINTS TO YOUR EXISTING index.js
+// Place these BEFORE the error handling section
+
+// Enhanced Email Debug Endpoint
+app.post('/debug-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    console.log('🔍 === EMAIL DEBUG STARTED ===');
+    console.log('📧 EMAIL_USERNAME:', process.env.EMAIL_USERNAME);
+    console.log('🔑 EMAIL_PASSWORD exists:', !!process.env.EMAIL_PASSWORD);
+    console.log('🔑 EMAIL_PASSWORD length:', process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.length : 0);
+    console.log('🔑 EMAIL_PASSWORD preview:', process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.substring(0, 4) + '...' : 'NOT_SET');
+    
+    // Test transporter creation
+    const transporter = nodemailer.createTransporter({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USERNAME,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
+    
+    console.log('📧 Transporter created, verifying...');
+    
+    // Verify transporter
+    await transporter.verify();
+    console.log('✅ Email transporter verified successfully');
+    
+    // Send test email
+    const testEmail = email || 'test@gmail.com';
+    console.log('📤 Sending test email to:', testEmail);
+    
+    const testResult = await transporter.sendMail({
+      from: process.env.EMAIL_USERNAME,
+      to: testEmail,
+      subject: '🔍 Email Service Debug Test - AI Chatbot',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #4f46e5;">🔍 Email Service Debug Test</h2>
+          <div style="background: #f0f9ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>✅ Email service is working correctly!</strong></p>
+            <p>If you receive this email, OTP emails should also work.</p>
+          </div>
+          <div style="background: #f9fafb; padding: 15px; border-radius: 8px;">
+            <p><strong>Debug Info:</strong></p>
+            <p>📧 From: ${process.env.EMAIL_USERNAME}</p>
+            <p>📧 To: ${testEmail}</p>
+            <p>⏰ Timestamp: ${new Date().toISOString()}</p>
+            <p>🏷️ Message ID: ${Date.now()}</p>
+          </div>
+          <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">
+            This is a test email from AI Character Chatbot debug system.
+          </p>
+        </div>
+      `
+    });
+    
+    console.log('✅ Debug email sent successfully');
+    console.log('📬 Message ID:', testResult.messageId);
+    console.log('📤 Response:', testResult.response);
+    
+    res.json({
+      success: true,
+      message: 'Debug email sent successfully - Check your inbox!',
+      details: {
+        messageId: testResult.messageId,
+        from: process.env.EMAIL_USERNAME,
+        to: testEmail,
+        transporterVerified: true,
+        response: testResult.response,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ === EMAIL DEBUG FAILED ===');
+    console.error('❌ Error:', error.message);
+    console.error('❌ Error code:', error.code);
+    console.error('❌ Error command:', error.command);
+    console.error('❌ Full error:', error);
+    
+    res.json({
+      success: false,
+      error: error.message,
+      details: {
+        emailUsername: process.env.EMAIL_USERNAME,
+        emailPasswordConfigured: !!process.env.EMAIL_PASSWORD,
+        errorCode: error.code,
+        errorCommand: error.command,
+        suggestions: [
+          "1. Check if Gmail app password is correct",
+          "2. Verify 2-factor authentication is enabled",
+          "3. Generate new app password if needed",
+          "4. Check Gmail security settings"
+        ]
+      }
+    });
+  }
+});
+
+// Enhanced OTP sending with better logging
+app.post('/send-otp-debug', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    console.log('📧 === OTP DEBUG SEND STARTED ===');
+    console.log('📧 Target email:', email);
+    
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log('🔢 Generated OTP:', otp);
+    
+    // Create transporter
+    const transporter = nodemailer.createTransporter({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USERNAME,
+        pass: process.env.EMAIL_PASSWORD
+      }
+    });
+    
+    // Enhanced email content
+    const mailOptions = {
+      from: process.env.EMAIL_USERNAME,
+      to: email,
+      subject: 'Your OTP for AI Character Chatbot - Debug Mode',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <h1 style="color: #4f46e5; margin: 0;">🤖 AI Character Chatbot</h1>
+            <p style="color: #6b7280; margin: 5px 0;">One-Time Password (OTP)</p>
+          </div>
+          
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px; text-align: center; margin: 20px 0;">
+            <p style="color: white; margin: 0 0 10px 0; font-size: 16px;">Your verification code is:</p>
+            <div style="background: rgba(255,255,255,0.9); padding: 15px; border-radius: 8px; display: inline-block;">
+              <span style="font-size: 36px; font-weight: bold; color: #1f2937; letter-spacing: 4px;">${otp}</span>
+            </div>
+          </div>
+          
+          <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0 0 10px 0; color: #374151;"><strong>Important:</strong></p>
+            <ul style="color: #6b7280; margin: 0; padding-left: 20px;">
+              <li>This code will expire in <strong>10 minutes</strong></li>
+              <li>Use this code to complete your login</li>
+              <li>Don't share this code with anyone</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <p style="color: #9ca3af; font-size: 14px; margin: 0;">
+              If you didn't request this code, please ignore this email.
+            </p>
+          </div>
+          
+          <div style="border-top: 1px solid #e5e7eb; margin-top: 30px; padding-top: 20px;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+              Debug Info: Sent at ${new Date().toISOString()} | From: ${process.env.EMAIL_USERNAME}
+            </p>
+          </div>
+        </div>
+      `
+    };
+    
+    console.log('📤 Sending OTP email...');
+    const result = await transporter.sendMail(mailOptions);
+    
+    console.log('✅ === OTP EMAIL SENT SUCCESSFULLY ===');
+    console.log('📬 Message ID:', result.messageId);
+    console.log('📧 To:', email);
+    console.log('🔢 OTP:', otp);
+    console.log('📤 Server response:', result.response);
+    
+    res.json({
+      success: true,
+      message: 'OTP sent successfully - Check your email!',
+      email: email,
+      otp: otp, // Include in response for debugging (remove in production)
+      details: {
+        messageId: result.messageId,
+        response: result.response,
+        timestamp: new Date().toISOString()
+      },
+      instructions: [
+        "1. Check your inbox for the OTP email",
+        "2. Check spam/junk folder if not in inbox", 
+        "3. Check 'Promotions' tab in Gmail",
+        "4. Wait 2-3 minutes for email delivery"
+      ]
+    });
+    
+  } catch (error) {
+    console.error('❌ === OTP SEND FAILED ===');
+    console.error('❌ Error:', error.message);
+    console.error('❌ Full error:', error);
+    
+    res.json({
+      success: false,
+      error: error.message,
+      troubleshooting: [
+        "1. Check Gmail app password is correct",
+        "2. Verify 2-factor authentication enabled",
+        "3. Generate new app password",
+        "4. Check email exists and is valid"
+      ]
+    });
+  }
+});
+
+// Gmail App Password Generator Guide
+app.get('/gmail-setup-guide', (req, res) => {
+  res.json({
+    title: "📧 Gmail App Password Setup Guide",
+    currentConfig: {
+      emailUsername: process.env.EMAIL_USERNAME,
+      emailPasswordConfigured: !!process.env.EMAIL_PASSWORD,
+      emailPasswordLength: process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.length : 0
+    },
+    steps: [
+      {
+        step: 1,
+        title: "Enable 2-Factor Authentication",
+        action: "Go to myaccount.google.com → Security → 2-Step Verification",
+        note: "Must be enabled before creating app passwords"
+      },
+      {
+        step: 2, 
+        title: "Generate App Password",
+        action: "Security → 2-Step Verification → App passwords",
+        note: "Select 'Mail' as the app type"
+      },
+      {
+        step: 3,
+        title: "Copy 16-digit Password", 
+        action: "Copy the generated 16-character password",
+        note: "Format: xxxx xxxx xxxx xxxx (no spaces in .env)"
+      },
+      {
+        step: 4,
+        title: "Update Environment Variable",
+        action: "Set EMAIL_PASSWORD=your16digitpassword in Render",
+        note: "Go to Render → Service → Environment → Edit"
+      },
+      {
+        step: 5,
+        title: "Redeploy",
+        action: "Redeploy your service after updating environment",
+        note: "Changes take effect after restart"
+      }
+    ],
+    testEndpoints: [
+      "POST /debug-email - Test email service",
+      "POST /send-otp-debug - Test OTP sending", 
+      "GET /gmail-setup-guide - This guide"
+    ]
+  });
+});
 
 // Error handling
 app.use((err, req, res, next) => {
