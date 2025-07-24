@@ -35,11 +35,27 @@ const app = express();
 
 // STEP 3: MIDDLEWARE SETUP
 app.use(cors({
-  origin: true,
+  origin: [
+    'https://ai-character-chatbot-one.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:5173'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'token', 'Origin', 'X-Requested-With', 'Accept'],
   optionsSuccessStatus: 200
+}));
+
+// ✅ ADD: Handle preflight OPTIONS requests
+app.options('*', cors({
+  origin: [
+    'https://ai-character-chatbot-one.vercel.app',
+    'http://localhost:3000', 
+    'http://localhost:5173'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'token', 'Origin', 'X-Requested-With', 'Accept']
 }));
 
 app.use(express.json({ limit: '50mb' }));
