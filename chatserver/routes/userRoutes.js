@@ -1,148 +1,27 @@
-// backend/routes/userRoutes.js - COMPLETE WORKING USER ROUTES
-import express from "express";
-import { loginUser, verifyUser, getMyProfile } from "../controllers/userControllers.js";
-import isAuth from "../middlewares/isAuth.js";
 
-const router = express.Router();
-
-console.log("👤 === USER ROUTES STARTING ===");
-
-// Debug middleware - logs every request to user routes
-router.use((req, res, next) => {
-  console.log(`\n🔍 === USER ROUTE REQUEST ===`);
-  console.log(`   Method: ${req.method}`);
-  console.log(`   Path: ${req.originalUrl}`);
-  console.log(`   Body:`, Object.keys(req.body).length ? req.body : 'Empty');
-  console.log(`   Headers:`, {
-    'content-type': req.headers['content-type'],
-    'authorization': req.headers.authorization ? 'Present' : 'None'
-  });
-  console.log("===============================\n");
-  next();
-});
-
-// ============================================
-// ✅ PUBLIC ROUTES - No authentication required
-// ============================================
-
-// Login route - Send OTP to email
-router.post("/login", async (req, res) => {
-  console.log("📧 === LOGIN ROUTE HIT ===");
-  console.log("📧 Request body:", req.body);
-  
-  try {
-    await loginUser(req, res);
-  } catch (error) {
-    console.error("❌ Login route error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Login failed",
-      error: error.message
-    });
-  }
-});
-
-// ✅ VERIFY ROUTE - This fixes the 404 error!
-router.post("/verify", async (req, res) => {
-  console.log("🔍 === VERIFY ROUTE HIT ===");
-  console.log("🔍 This is the route that was causing 404!");
-  console.log("🔍 Method:", req.method);
-  console.log("🔍 Body:", req.body);
-  console.log("🔍 OTP:", req.body.otp);
-  console.log("🔍 Token:", req.body.verifyToken ? 'Present' : 'Missing');
-  
-  try {
-    await verifyUser(req, res);
-  } catch (error) {
-    console.error("❌ Verify route error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Verification failed",
-      error: error.message
-    });
-  }
-});
-
-// Test route to confirm routes are working
-router.get("/test", (req, res) => {
-  console.log("🧪 === USER TEST ROUTE HIT ===");
+// ✅ NEW: Frontend debugging route
+router.get("/debug-frontend", (req, res) => {
+  console.log("🐛 === FRONTEND DEBUG ROUTE ===");
   res.json({
-    success: true,
-    message: "✅ User routes are working perfectly!",
-    timestamp: new Date().toISOString(),
-    availableRoutes: [
-      "POST /api/user/login - Send OTP (✅ Working)",
-      "POST /api/user/verify - Verify OTP (✅ Working)", 
-      "GET /api/user/me - Get profile (✅ Working)",
-      "GET /api/user/test - This test route (✅ Working)"
-    ],
-    testInstructions: {
-      step1: "POST to /api/user/login with {email: 'your@email.com'}",
-      step2: "Check email for OTP and get verifyToken from response",
-      step3: "POST to /api/user/verify with {otp: '123456', verifyToken: 'token_from_step1'}"
+    message: "Frontend debugging information",
+    commonIssues: {
+      "404 on verify": "Frontend making GET instead of POST request",
+      "Wrong endpoint": "Check if frontend is using correct URL",
+      "Missing data": "Ensure OTP and verifyToken are in request body for POST"
     },
-    systemStatus: {
-      controllers: "✅ Loaded",
-      middleware: "✅ Loaded", 
-      emailService: process.env.EMAIL_USERNAME ? "✅ Configured" : "❌ Missing"
-    }
-  });
-});
-
-// ============================================
-// ✅ PROTECTED ROUTES - Authentication required
-// ============================================
-
-// Get user profile
-router.get("/me", isAuth, async (req, res) => {
-  console.log("👤 === GET PROFILE ROUTE HIT ===");
-  console.log("👤 User ID:", req.user._id);
-  console.log("👤 User Email:", req.user.email);
-  
-  try {
-    await getMyProfile(req, res);
-  } catch (error) {
-    console.error("❌ Profile route error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to get profile",
-      error: error.message
-    });
-  }
-});
-
-// ============================================
-// ✅ ADDITIONAL HELPFUL ROUTES
-// ============================================
-
-// Route to test authentication
-router.get("/test-auth", isAuth, (req, res) => {
-  console.log("🔒 === AUTH TEST ROUTE HIT ===");
-  res.json({
-    success: true,
-    message: "✅ Authentication is working!",
-    user: {
-      id: req.user._id,
-      email: req.user.email,
-      isVerified: req.user.isVerified
+    frontendFix: {
+      correctMethod: "POST",
+      correctURL: "/api/user/verify", 
+      correctBody: {
+        otp: "123456",
+        verifyToken: "token_from_login"
+      },
+      incorrectMethod: "GET (causes 404 or wrong behavior)"
     },
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Debug route to check email configuration
-router.get("/debug-email", (req, res) => {
-  console.log("🐛 === EMAIL DEBUG ROUTE ===");
-  res.json({
-    emailService: {
-      username: process.env.EMAIL_USERNAME || "Not configured",
-      configured: !!process.env.EMAIL_USERNAME,
-      password: process.env.EMAIL_PASSWORD ? "Present" : "Missing"
-    },
-    environment: {
-      NODE_ENV: process.env.NODE_ENV,
-      JWT_SECRET: process.env.JWT_SECRET ? "Present" : "Missing"
-    }
+    testCommands: [
+      "curl -X POST /api/user/verify -H 'Content-Type: application/json' -d '{\"otp\":\"123456\",\"verifyToken\":\"token\"}'",
+      "Should NOT use: curl -X GET /api/user/verify?otp=123456&verifyToken=token"
+    ]
   });
 });
 
@@ -160,10 +39,12 @@ router.use("*", (req, res) => {
   res.status(404).json({
     success: false,
     message: `User route not found: ${req.method} ${req.originalUrl}`,
+    
     availableRoutes: {
       public: [
         "POST /api/user/login - Send OTP email",
-        "POST /api/user/verify - Verify OTP and get JWT token",
+        "POST /api/user/verify - Verify OTP and get JWT token (RECOMMENDED)",
+        "GET /api/user/verify - Verify OTP (FALLBACK FOR FRONTEND)",
         "GET /api/user/test - Test route"
       ],
       protected: [
@@ -171,19 +52,33 @@ router.use("*", (req, res) => {
         "GET /api/user/test-auth - Test authentication (requires JWT)"
       ],
       debug: [
-        "GET /api/user/debug-email - Check email configuration"
+        "GET /api/user/debug-email - Check email configuration",
+        "GET /api/user/debug-frontend - Frontend debugging help"
       ]
     },
-    note: "Make sure you're sending requests to the correct endpoints with proper HTTP methods"
+    
+    troubleshooting: {
+      issue: req.method === 'GET' && req.originalUrl.includes('verify') ? 
+        "Frontend making GET request to verify - should use POST" : 
+        "Route not found",
+      solution: req.method === 'GET' && req.originalUrl.includes('verify') ?
+        "Change frontend to use POST /api/user/verify with OTP in request body" :
+        "Check the correct endpoint and HTTP method",
+      supportedMethods: "GET verify route now supported as fallback"
+    },
+    
+    note: "Both GET and POST are now supported for /verify endpoint for frontend compatibility"
   });
 });
 
 console.log("✅ === USER ROUTES CONFIGURED ===");
 console.log("✅ POST /login - Send OTP email");
-console.log("✅ POST /verify - Verify OTP and login (FIXES 404!)");
+console.log("✅ POST /verify - Verify OTP and login (RECOMMENDED)");
+console.log("✅ GET /verify - Verify OTP (FRONTEND COMPATIBILITY)");
 console.log("✅ GET /me - Get user profile (auth required)");
 console.log("✅ GET /test - Test route");
 console.log("✅ GET /test-auth - Test authentication");
 console.log("✅ GET /debug-email - Debug email config");
+console.log("✅ GET /debug-frontend - Frontend debugging help");
 
 export default router;

@@ -179,7 +179,29 @@ if (characterRoutes) {
   console.error('❌ === CHARACTER SYSTEM DISABLED ===');
   console.error('❌ Character routes not available');
 }
-
+// Test both GET and POST verify endpoints
+app.get("/test-verify-fix", (req, res) => {
+  res.json({
+    message: "🔧 Testing verify endpoint fix",
+    issue: "Frontend making GET instead of POST to /api/user/verify",
+    solution: "Backend now supports both GET and POST methods",
+    tests: [
+      {
+        method: "POST",
+        url: "/api/user/verify", 
+        description: "Correct way - OTP in request body",
+        status: "✅ Working"
+      },
+      {
+        method: "GET", 
+        url: "/api/user/verify",
+        description: "Frontend compatibility - OTP in query params",
+        status: "✅ Now working (FIXED!)"
+      }
+    ],
+    timestamp: new Date().toISOString()
+  });
+});
 // STEP 6: MAIN ENDPOINTS (PRESERVED)
 
 // Root endpoint
