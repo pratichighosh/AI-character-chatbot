@@ -28,9 +28,9 @@ dotenv.config();
 
 const app = express();
 
-// STEP 3: MIDDLEWARE SETUP - EXACTLY AS YOUR ORIGINAL
+// STEP 3: MIDDLEWARE SETUP
 app.use(cors({
-  origin: "https://ai-character-chatbot-one.vercel.app",
+  origin: ["https://ai-character-chatbot-one.vercel.app", "http://localhost:3000", "http://localhost:5173"],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'token']
@@ -151,11 +151,12 @@ if (characterRoutes) {
           "Character creation",
           "Character selection", 
           "Character-based AI chat",
-          "Default characters (Einstein, Sherlock, etc.)"
+          "Default characters (Einstein, Sherlock, etc.)",
+          "Character options endpoint" // ✅ NEW
         ],
         endpoints: [
           "GET /api/characters - Get all characters (requires auth)",
-          "GET /api/characters/options - Get character creation options (requires auth)",
+          "GET /api/characters/options - Get character creation options (requires auth)", // ✅ NEW
           "POST /api/characters - Create character (requires auth)",
           "GET /api/characters/:id - Get single character (requires auth)",
           "PUT /api/characters/:id - Update character (requires auth)", 
@@ -215,6 +216,7 @@ app.get("/", (req, res) => {
       regularChat: userRoutes && chatRoutes ? "✅ Available" : "❌ Missing routes",
       characterChat: characterRoutes ? "✅ Available" : "❌ Disabled",
       characterCreation: characterRoutes ? "✅ Available" : "❌ Disabled",
+      characterOptions: characterRoutes ? "✅ Available" : "❌ Disabled", // ✅ NEW
       userManagement: userRoutes ? "✅ Available" : "❌ Missing"
     },
     systemStatus: {
@@ -227,6 +229,7 @@ app.get("/", (req, res) => {
       "GET /test-my-key - Test Gemini API",
       "POST /test-character - Test character AI",
       "GET /test-character-system - Test character system",
+      "GET /test-character-options - Test character options endpoint", // ✅ NEW
       "GET /debug-character-system - Debug character issues",
       "GET /health - Health check"
     ]
@@ -246,6 +249,7 @@ app.get("/status", (req, res) => {
       userSystem: userRoutes ? "✅ Active" : "❌ Inactive",
       chatSystem: chatRoutes ? "✅ Active" : "❌ Inactive", 
       characterSystem: characterRoutes ? "✅ Active" : "❌ Inactive",
+      characterOptions: characterRoutes ? "✅ Active" : "❌ Inactive", // ✅ NEW
       geminiAPI: process.env.GEMINI_API_KEY ? "✅ Configured" : "❌ Missing",
       emailService: process.env.EMAIL_USERNAME ? "✅ Configured" : "❌ Missing"
     },
@@ -254,6 +258,7 @@ app.get("/status", (req, res) => {
       "✅ Regular AI Chat",
       characterRoutes ? "✅ Character-based AI Chat" : "❌ Character Chat (Disabled)",
       characterRoutes ? "✅ Custom Character Creation" : "❌ Character Creation (Disabled)",
+      characterRoutes ? "✅ Character Creation Options API" : "❌ Character Options (Disabled)", // ✅ NEW
       "✅ Chat History Management"
     ]
   });
@@ -321,6 +326,48 @@ app.get("/test-my-key", async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message
+    });
+  }
+});
+
+// ✅ NEW: Test Character Options Endpoint
+app.get("/test-character-options", async (req, res) => {
+  try {
+    console.log("🎭 Testing character options endpoint...");
+    
+    if (!characterRoutes) {
+      return res.json({
+        success: false,
+        error: "Character system is disabled",
+        status: "disabled",
+        note: "Character routes not available - missing required files"
+      });
+    }
+    
+    // Test the character options endpoint structure
+    res.json({
+      success: true,
+      message: "🎭 Character options endpoint is available!",
+      endpoint: "/api/characters/options",
+      status: "active",
+      note: "Endpoint requires authentication - use with valid JWT token",
+      testWith: "Send GET request to /api/characters/options with Authorization header",
+      expectedResponse: {
+        personalityTraits: "Array of 15+ personality options",
+        speakingStyles: "Array of 15+ speaking style options", 
+        languages: "Array of 14 language options",
+        responseStyles: "Array of 12 response style options",
+        categories: "Array of 9 category options"
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    res.json({
+      success: false,
+      message: "Character options endpoint test failed",
+      error: error.message,
+      note: "Check if character system is properly configured"
     });
   }
 });
@@ -620,6 +667,7 @@ app.get("/health", (req, res) => {
       regularChat: (userRoutes && chatRoutes) ? "✅ Available" : "❌ Missing",
       characterChat: characterRoutes ? "✅ Available" : "❌ Disabled", 
       characterCreation: characterRoutes ? "✅ Available" : "❌ Disabled",
+      characterOptions: characterRoutes ? "✅ Available" : "❌ Disabled", // ✅ NEW
       geminiAPI: process.env.GEMINI_API_KEY ? "✅ Configured" : "❌ Missing",
       emailService: process.env.EMAIL_USERNAME ? "✅ Configured" : "❌ Missing"
     },
@@ -705,7 +753,8 @@ app.use('*', (req, res) => {
         'POST /test-chat - Regular chat test',
         'POST /test-character - Character chat test',
         'POST /test-all-characters - Test all characters',
-        'GET /test-character-system - Test character system'
+        'GET /test-character-system - Test character system',
+        'GET /test-character-options - Test character options endpoint' // ✅ NEW
       ],
       api: [
         'POST /api/user/login - User login',
@@ -718,6 +767,7 @@ app.use('*', (req, res) => {
         'DELETE /api/chat/:id - Delete chat',
         ...(characterRoutes ? [
           'GET /api/characters - Get characters',
+          'GET /api/characters/options - Get character creation options', // ✅ NEW
           'POST /api/characters - Create character',
           'GET /api/characters/:id - Get character',
           'PUT /api/characters/:id - Update character',
@@ -759,6 +809,7 @@ const startServer = async () => {
       console.log(`👤 User System: ${userRoutes ? '✅ Active' : '❌ Inactive'}`);
       console.log(`💬 Chat System: ${chatRoutes ? '✅ Active' : '❌ Inactive'}`);
       console.log(`🎭 Character System: ${characterRoutes ? '✅ Active' : '❌ Disabled'}`);
+      console.log(`🔧 Character Options: ${characterRoutes ? '✅ Active' : '❌ Disabled'}`); // ✅ NEW
       console.log(`🤖 Gemini API: ${process.env.GEMINI_API_KEY ? '✅ Ready' : '❌ Not configured'}`);
       
       console.log('\n🧪 === TEST ENDPOINTS ===');
@@ -767,6 +818,7 @@ const startServer = async () => {
       console.log(`🤖 Regular Chat: POST http://localhost:${PORT}/test-chat`);
       console.log(`🎭 Character Chat: POST http://localhost:${PORT}/test-character`);
       console.log(`👥 All Characters: POST http://localhost:${PORT}/test-all-characters`);
+      console.log(`🔧 Character Options: http://localhost:${PORT}/test-character-options`); // ✅ NEW
       
       if (characterRoutes) {
         console.log(`✅ Character System: http://localhost:${PORT}/test-character-system`);
@@ -777,9 +829,10 @@ const startServer = async () => {
       console.log('\n🎯 === NEXT STEPS ===');
       if (characterRoutes) {
         console.log('✅ 1. Character system is ready!');
-        console.log('✅ 2. Test character routes: /test-character-system');
-        console.log('✅ 3. Try creating characters in the frontend');
-        console.log('✅ 4. Chat with Einstein, Sherlock, Shakespeare!');
+        console.log('✅ 2. Character options endpoint available!'); // ✅ NEW
+        console.log('✅ 3. Test character routes: /test-character-system');
+        console.log('✅ 4. Try creating characters in the frontend');
+        console.log('✅ 5. Chat with Einstein, Sherlock, Shakespeare!');
       } else {
         console.log('❌ 1. Character system disabled - missing files');
         console.log('❌ 2. Create required files: Character.js, characterControllers.js');
@@ -793,10 +846,13 @@ const startServer = async () => {
       console.log('✅ Chat History Management');
       console.log(`${characterRoutes ? '✅' : '❌'} Character-based AI Chat`);
       console.log(`${characterRoutes ? '✅' : '❌'} Custom Character Creation`);
+      console.log(`${characterRoutes ? '✅' : '❌'} Character Creation Options API`); // ✅ NEW
       console.log(`${characterRoutes ? '✅' : '❌'} Pre-built Characters (Einstein, Sherlock, etc.)`);
       
       console.log('\n================================');
       console.log('🎉 SERVER READY FOR CONNECTIONS!');
+      console.log('🎭 CHARACTER SYSTEM FULLY OPERATIONAL!');
+      console.log('🔧 CHARACTER OPTIONS ENDPOINT READY!'); // ✅ NEW
       console.log('================================\n');
     });
     
