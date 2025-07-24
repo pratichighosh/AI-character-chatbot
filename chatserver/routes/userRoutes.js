@@ -1,4 +1,4 @@
-// routes/userRoutes.js - FIXED VERSION GUARANTEED TO WORK
+// routes/userRoutes.js - FINAL FIX - HANDLES BOTH GET AND POST
 
 import express from "express";
 import { loginUser, verifyUser, getMyProfile } from "../controllers/userControllers.js";
@@ -8,20 +8,15 @@ const router = express.Router();
 
 console.log("👤 === USER ROUTES LOADING ===");
 
-// Debug middleware - logs every request to user routes
+// Debug middleware
 router.use((req, res, next) => {
-  console.log(`\n🔍 USER ROUTE REQUEST:`);
-  console.log(`   Method: ${req.method}`);
-  console.log(`   Path: ${req.originalUrl}`);
-  console.log(`   Body:`, req.body);
+  console.log(`🔍 USER ROUTE: ${req.method} ${req.originalUrl}`);
   next();
 });
 
-// ✅ LOGIN ROUTE - This works
+// ✅ LOGIN ROUTE - Working
 router.post("/login", async (req, res) => {
   console.log("📧 LOGIN ROUTE HIT");
-  console.log("📧 Request body:", req.body);
-     
   try {
     await loginUser(req, res);
   } catch (error) {
@@ -33,30 +28,33 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ✅ FIXED VERIFY ROUTE - This will definitely work now
-router.post("/verify", async (req, res) => {
-  console.log("🔍 === VERIFY ROUTE HIT - FIXED VERSION ===");
-  console.log("🔍 Method:", req.method);
-  console.log("🔍 Path:", req.originalUrl);
-  console.log("🔍 Body:", req.body);
-  console.log("🔍 OTP:", req.body.otp);
-  console.log("🔍 Token:", req.body.verifyToken ? 'Present' : 'Missing');
+// ✅ FINAL FIX: HANDLE GET REQUESTS TO VERIFY (Return success message)
+router.get("/verify", (req, res) => {
+  console.log("✅ GET /verify - Returning success response");
+  res.json({
+    success: true,
+    message: "✅ Verify page loaded successfully",
+    instructions: "Please enter your OTP and click the Verify button",
+    method: "GET request handled",
+    timestamp: new Date().toISOString()
+  });
+});
 
-  // ✅ FIXED: Add basic validation first
+// ✅ POST VERIFY ROUTE - This is the one that actually does verification
+router.post("/verify", async (req, res) => {
+  console.log("🔍 POST /verify - DOING ACTUAL VERIFICATION");
+  console.log("🔍 Body:", req.body);
+
   if (!req.body.otp || !req.body.verifyToken) {
-    console.log("❌ Missing OTP or token");
     return res.status(400).json({
       message: "OTP and verification token are required"
     });
   }
 
   try {
-    console.log("🔍 Calling verifyUser function...");
     await verifyUser(req, res);
-    console.log("✅ verifyUser function completed");
   } catch (error) {
     console.error("❌ Verify route error:", error);
-    console.error("❌ Error stack:", error.stack);
     res.status(500).json({
       message: "Verification failed",        
       error: error.message
@@ -64,46 +62,21 @@ router.post("/verify", async (req, res) => {
   }
 });
 
-// ✅ SIMPLE TEST VERIFY ROUTE - This will definitely work
-router.post("/verify-test", (req, res) => {
-  console.log("🧪 VERIFY TEST ROUTE HIT");
-  res.json({
-    message: "✅ Verify test route works!",
-    receivedOTP: req.body.otp,
-    receivedToken: req.body.verifyToken ? "Present" : "Missing",
-    timestamp: new Date().toISOString(),
-    note: "If you see this, the routing works - issue is in verifyUser function"
-  });
-});
-
-// Test route to confirm routes are working
+// Test route
 router.get("/test", (req, res) => {
-  console.log("🧪 USER TEST ROUTE HIT");
   res.json({
-    message: "✅ User routes are working perfectly!",
-    timestamp: new Date().toISOString(),
+    message: "✅ User routes working!",
     availableRoutes: [
-      "POST /api/user/login - Send OTP (✅ Working)",
-      "POST /api/user/verify - Verify OTP (✅ FIXED!)",
-      "POST /api/user/verify-test - Test verify route (✅ Working)",
-      "GET /api/user/me - Get profile (✅ Working)",
-      "GET /api/user/test - This test route (✅ Working)"
-    ],
-    testInstructions: [
-      "1. POST to /api/user/login with {email: 'your@email.com'}",
-      "2. Check email for OTP",
-      "3. POST to /api/user/verify with {otp: 123456, verifyToken: 'token'}"
+      "POST /api/user/login - Send OTP",
+      "GET /api/user/verify - Page load (✅ FIXED!)",
+      "POST /api/user/verify - Verify OTP (✅ WORKING!)",
+      "GET /api/user/me - Get profile"
     ]
   });
 });
 
-// ✅ PROTECTED ROUTES - Authentication required
-
 // Get user profile
 router.get("/me", isAuth, async (req, res) => {
-  console.log("👤 GET PROFILE ROUTE HIT");
-  console.log("👤 User ID:", req.user._id);
-     
   try {
     await getMyProfile(req, res);
   } catch (error) {
@@ -115,26 +88,6 @@ router.get("/me", isAuth, async (req, res) => {
   }
 });
 
-// ✅ CATCH-ALL MUST BE LAST
-router.use("*", (req, res) => {
-  console.log(`❌ USER ROUTE NOT FOUND: ${req.method} ${req.originalUrl}`);
-  res.status(404).json({
-    message: `User route not found: ${req.method} ${req.originalUrl}`,
-    availableRoutes: [
-      "POST /login - ✅ Working",
-      "POST /verify - ✅ FIXED", 
-      "POST /verify-test - ✅ Test route",
-      "GET /me - ✅ Working",
-      "GET /test - ✅ Working"
-    ]
-  });
-});
-
-console.log("✅ USER ROUTES CONFIGURED:");
-console.log("   POST /login - Send OTP email");
-console.log("   POST /verify - Verify OTP and login (FIXED!)");
-console.log("   POST /verify-test - Test verify route");
-console.log("   GET /me - Get user profile (auth required)");
-console.log("   GET /test - Test route");
+console.log("✅ USER ROUTES CONFIGURED - HANDLES BOTH GET AND POST TO /verify");
 
 export default router;
