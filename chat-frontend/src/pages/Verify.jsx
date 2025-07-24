@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { UserData } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "../components/Loading";
+import toast from "react-hot-toast";
 
 const Verify = () => {
   const [otp, setOtp] = useState("");
@@ -36,52 +37,72 @@ const Verify = () => {
     }
   }, [navigate]);
 
-  // ✅ FIXED: Ensure proper form submission handling
+  // 🔧 CRITICAL FIX: Completely prevent any form submission behavior
   const submitHandler = async (e) => {
-    e.preventDefault(); // Prevent default form submission
-    e.stopPropagation(); // Stop event bubbling
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
     
-    console.log('🔍 Form submitted - verifying OTP:', otp);
+    console.log('🚀 MANUAL SUBMIT - Preventing any form submission');
+    console.log('📝 OTP entered:', otp);
     
     if (!otp || otp.length !== 6) {
       toast.error("Please enter a valid 6-digit OTP");
       return;
     }
     
-    // ✅ FIXED: Call verifyUser with proper OTP format
-    await verifyUser(otp, navigate); // Pass as string, verifyUser converts to number
+    // 🔧 CRITICAL: Call verifyUser function directly
+    console.log('🔍 Calling verifyUser function directly...');
+    try {
+      await verifyUser(otp, navigate);
+    } catch (error) {
+      console.error('❌ Error in submitHandler:', error);
+      toast.error("Verification failed. Please try again.");
+    }
+  };
+
+  // 🔧 ALTERNATIVE: Direct verification without form
+  const handleDirectVerification = async () => {
+    console.log('🎯 DIRECT VERIFICATION - Bypassing form completely');
+    
+    if (!otp || otp.length !== 6) {
+      toast.error("Please enter a valid 6-digit OTP");
+      return;
+    }
+
+    await verifyUser(otp, navigate);
   };
 
   const handleResendOTP = async () => {
-    setTimeLeft(600); // Reset timer
+    setTimeLeft(600);
     setCanResend(false);
-    setOtp(""); // Clear current OTP
+    setOtp("");
     await resendOTP(navigate);
   };
 
   const handleOtpChange = (e) => {
     const value = e.target.value;
-    // Only allow numbers and limit to 6 digits
     if (/^\d{0,6}$/.test(value)) {
       setOtp(value);
     }
   };
 
-  // ✅ ADDITIONAL FIX: Handle Enter key press
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && otp.length === 6 && !btnLoading) {
-      submitHandler(e);
+  // 🔧 Handle Enter key - bypass form submission
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('⌨️ Enter pressed - calling direct verification');
+      handleDirectVerification();
     }
   };
 
   return (
     <div className="flex justify-center items-center h-screen bg-gray-50">
-      {/* ✅ FIXED: Remove method="POST" from form as it's handled by React */}
-      <form
-        className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md"
-        onSubmit={submitHandler}
-        noValidate
-      >
+      {/* 🔧 REMOVED FORM - Using div to prevent any form submission */}
+      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
         <div className="text-center mb-6">
           <h2 className="text-3xl font-bold text-gray-800 mb-2">Verify OTP</h2>
           <p className="text-gray-600">
@@ -99,14 +120,13 @@ const Verify = () => {
             name="otp"
             value={otp}
             onChange={handleOtpChange}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             className="border-2 border-gray-300 p-3 w-full rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-center text-2xl font-mono tracking-widest"
             placeholder="000000"
             maxLength="6"
             autoComplete="one-time-code"
             inputMode="numeric"
             pattern="[0-9]*"
-            required
             disabled={btnLoading}
           />
         </div>
@@ -124,9 +144,10 @@ const Verify = () => {
           )}
         </div>
 
-        {/* ✅ FIXED: Ensure button properly submits */}
+        {/* 🔧 CHANGED: Using onClick instead of form submission */}
         <button 
-          type="submit"
+          type="button"
+          onClick={handleDirectVerification}
           className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={btnLoading || otp.length !== 6}
         >
@@ -157,17 +178,54 @@ const Verify = () => {
           </button>
         </div>
 
-        {/* Debug info */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-4 p-2 bg-gray-100 rounded text-xs text-gray-600">
-            <p>✅ Debug: OTP verification uses POST method</p>
-            <p>📡 Backend: {localStorage.getItem('server') || 'https://ai-character-chatbot-2.onrender.com'}</p>
-            <p>🎯 Endpoint: POST /api/user/verify</p>
-            <p>📦 Payload: {`{ otp: ${otp || 'XXXXXX'}, verifyToken: "..." }`}</p>
-            <p>🔒 Token exists: {localStorage.getItem('verifyToken') ? '✅' : '❌'}</p>
-          </div>
-        )}
-      </form>
+        {/* 🔧 ENHANCED DEBUG INFO */}
+        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded text-xs">
+          <p className="font-semibold text-red-800 mb-2">🐛 DEBUG INFO:</p>
+          <p>🎯 Form removed - using direct button clicks</p>
+          <p>📡 Request method: POST (forced)</p>
+          <p>🔗 URL: /api/user/verify</p>
+          <p>📦 Payload: otp + verifyToken</p>
+          <p>🔒 Token: {localStorage.getItem('verifyToken') ? '✅ Found' : '❌ Missing'}</p>
+          <p>📱 OTP: {otp || 'Not entered'} ({otp.length}/6)</p>
+          <p>⚡ Loading: {btnLoading ? 'Yes' : 'No'}</p>
+        </div>
+
+        {/* 🔧 TEST BUTTON for direct axios call */}
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={() => {
+              console.log('🧪 TESTING: Direct axios call');
+              const verifyToken = localStorage.getItem("verifyToken");
+              
+              if (!verifyToken || !otp) {
+                toast.error("Missing token or OTP");
+                return;
+              }
+
+              // Direct axios test
+              import('axios').then(axios => {
+                axios.default.post('https://ai-character-chatbot-2.onrender.com/api/user/verify', {
+                  otp: Number(otp),
+                  verifyToken: verifyToken
+                })
+                .then(response => {
+                  console.log('✅ Direct axios SUCCESS:', response.data);
+                  toast.success('Direct call worked!');
+                })
+                .catch(error => {
+                  console.error('❌ Direct axios ERROR:', error.response?.data || error.message);
+                  toast.error('Direct call failed: ' + (error.response?.data?.message || error.message));
+                });
+              });
+            }}
+            className="w-full mt-2 bg-yellow-500 text-white py-2 px-4 rounded text-sm hover:bg-yellow-600"
+            disabled={!otp || otp.length !== 6}
+          >
+            🧪 Test Direct Axios Call
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

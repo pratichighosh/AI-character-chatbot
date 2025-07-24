@@ -22,7 +22,6 @@ export const UserProvider = ({ children }) => {
     try {
       console.log(`📧 Sending login request for: ${email}`);
       
-      // ✅ CORRECT: POST request to /api/user/login
       const { data } = await axios.post(`${server}/api/user/login`, { 
         email: email.trim().toLowerCase() 
       });
@@ -30,10 +29,7 @@ export const UserProvider = ({ children }) => {
       console.log("✅ Login request successful:", data.message);
       toast.success(data.message);
       
-      // Store verification token for OTP verification
       localStorage.setItem("verifyToken", data.verifyToken);
-      
-      // Navigate to verification page
       navigate("/verify");
       
     } catch (error) {
@@ -47,17 +43,23 @@ export const UserProvider = ({ children }) => {
     }
   }
 
-  // ✅ FIXED: Verify OTP function with correct POST request
+  // 🔧 ENHANCED: Verify OTP function with extensive debugging
   async function verifyUser(otp, navigate) {
+    console.log('🚀 === VERIFY USER FUNCTION CALLED ===');
+    console.log('📊 Function parameters:', { otp, navigateExists: !!navigate });
+    
     const verifyToken = localStorage.getItem("verifyToken");
+    console.log('🔒 Retrieved token:', verifyToken ? 'EXISTS' : 'MISSING');
     
     if (!verifyToken) {
+      console.error('❌ No verification token found');
       toast.error("Verification token not found. Please login again.");
       navigate("/login");
       return;
     }
 
     if (!otp || otp.toString().length !== 6) {
+      console.error('❌ Invalid OTP:', { otp, length: otp?.toString().length });
       toast.error("Please enter a valid 6-digit OTP");
       return;
     }
@@ -65,20 +67,37 @@ export const UserProvider = ({ children }) => {
     setBtnLoading(true);
     
     try {
-      console.log(`🔍 Verifying OTP: ${otp}`);
-      console.log(`📤 Making POST request to: ${server}/api/user/verify`);
-      
-      // ✅ CRITICAL FIX: Use axios.post() instead of axios() for cleaner implementation
-      const { data } = await axios.post(`${server}/api/user/verify`, {
+      const requestData = {
         otp: Number(otp),
         verifyToken: verifyToken
-      }, {
+      };
+      
+      const requestConfig = {
+        method: 'POST',
+        url: `${server}/api/user/verify`,
         headers: {
           'Content-Type': 'application/json'
-        }
-      });
+        },
+        data: requestData
+      };
 
-      console.log("✅ OTP verification successful:", data.message);
+      console.log('📤 === MAKING REQUEST ===');
+      console.log('🎯 URL:', requestConfig.url);
+      console.log('📋 Method:', requestConfig.method);
+      console.log('📦 Headers:', requestConfig.headers);
+      console.log('📊 Payload:', requestData);
+      console.log('🔧 Full Config:', requestConfig);
+
+      // 🔧 CRITICAL: Use explicit axios configuration
+      const response = await axios(requestConfig);
+      
+      console.log('✅ === REQUEST SUCCESSFUL ===');
+      console.log('📨 Response status:', response.status);
+      console.log('📋 Response headers:', response.headers);
+      console.log('📊 Response data:', response.data);
+
+      const { data } = response;
+      
       toast.success(data.message);
       
       // Clear old storage and set new authentication token
@@ -93,39 +112,51 @@ export const UserProvider = ({ children }) => {
       navigate("/");
       
     } catch (error) {
-      console.error("❌ Verification error:", error);
-      console.error("❌ Error details:", {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          method: error.config?.method,
-          url: error.config?.url
-        }
+      console.error('❌ === REQUEST FAILED ===');
+      console.error('🚨 Error object:', error);
+      console.error('📊 Error response:', error.response);
+      console.error('🔧 Error config:', error.config);
+      console.error('📡 Request details:', {
+        method: error.config?.method,
+        url: error.config?.url,
+        data: error.config?.data,
+        headers: error.config?.headers
       });
+      
+      // 🔧 SPECIFIC: Check if it's still making GET request
+      if (error.config?.method === 'GET') {
+        console.error('🚨🚨🚨 CRITICAL: Request was made as GET instead of POST!');
+        toast.error('CRITICAL ERROR: Request method changed to GET');
+      }
+      
+      if (error.response) {
+        console.error('❌ Response error details:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      } else if (error.request) {
+        console.error('❌ No response received:', error.request);
+      } else {
+        console.error('❌ Request setup error:', error.message);
+      }
       
       const errorMessage = error.response?.data?.message || "OTP verification failed. Please try again.";
       toast.error(errorMessage);
       
       // Handle specific error cases
       if (error.response?.status === 405) {
-        console.error("🚨 405 ERROR: Method not allowed - check if backend expects POST");
-        toast.error("Server error: Invalid request method");
+        console.error("🚨 405 ERROR: Method not allowed");
+        toast.error("Method not allowed - check server configuration");
       } else if (error.response?.status === 404) {
         console.error("🚨 404 ERROR: Verify endpoint not found!");
-        console.error("🔧 Check backend route mounting");
         toast.error("Server error: Verification endpoint not found");
-      } else if (error.response?.data?.expired) {
-        toast.error("OTP has expired. Please request a new one.");
-        setTimeout(() => navigate("/login"), 2000);
-      } else if (error.response?.data?.invalid) {
-        toast.error("Invalid verification token. Please try login again.");
-        localStorage.clear();
-        setTimeout(() => navigate("/login"), 2000);
       }
       
     } finally {
       setBtnLoading(false);
+      console.log('🏁 === VERIFY FUNCTION COMPLETED ===');
     }
   }
 
@@ -157,7 +188,6 @@ export const UserProvider = ({ children }) => {
     } catch (error) {
       console.error("❌ Fetch user error:", error);
       
-      // Clear invalid token
       if (error.response?.status === 403) {
         console.log("🔄 Clearing invalid authentication token");
         localStorage.clear();
@@ -193,7 +223,6 @@ export const UserProvider = ({ children }) => {
     }
 
     try {
-      // Decode token to get email (basic decode, not verification)
       const payload = JSON.parse(atob(verifyToken.split('.')[1]));
       console.log("🔄 Resending OTP to:", payload.email);
       
