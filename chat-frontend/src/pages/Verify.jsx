@@ -1,4 +1,4 @@
-// pages/Verify.jsx - FIXED TO PREVENT GET REQUEST
+// pages/Verify.jsx - FINAL FIXED VERSION - NO MORE GET REQUESTS
 import React, { useState, useEffect } from "react";
 import { UserData } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -6,7 +6,7 @@ import { LoadingSpinner } from "../components/Loading";
 
 const Verify = () => {
   const [otp, setOtp] = useState("");
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(600);
   const [canResend, setCanResend] = useState(false);
 
   const { verifyUser, btnLoading, resendOTP } = UserData();
@@ -37,38 +37,36 @@ const Verify = () => {
     }
   }, [navigate]);
 
-  // ✅ FIXED: Prevent form from making GET request
-  const submitHandler = (e) => {
-    e.preventDefault(); // ✅ CRITICAL: Prevent form default submission
-    e.stopPropagation(); // ✅ CRITICAL: Stop event bubbling
-    
-    console.log('🔍 Form submitted - verifying OTP:', otp);
-    console.log('🔍 This should make a POST request, not GET');
-    
-    if (!otp || otp.length !== 6) {
-      alert("Please enter a valid 6-digit OTP");
-      return false; // ✅ CRITICAL: Return false to prevent submission
-    }
-    
-    // ✅ FIXED: Call verifyUser - this makes POST request
-    verifyUser(Number(otp), navigate);
-    
-    return false; // ✅ CRITICAL: Prevent any form submission
-  };
-
-  // ✅ NEW: Handle button click directly (bypass form)
-  const handleVerifyClick = (e) => {
+  // ✅ COMPLETELY PREVENT ANY FORM SUBMISSION
+  const handleFormSubmit = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    console.log('🔍 Button clicked - verifying OTP:', otp);
+    console.log("🛑 Form submission prevented - using button click instead");
+    return false;
+  };
+
+  // ✅ DIRECT BUTTON CLICK - NO FORM SUBMISSION
+  const handleVerifyClick = () => {
+    console.log('🔍 === VERIFY BUTTON CLICKED ===');
+    console.log('🔍 OTP:', otp);
+    console.log('🔍 Will make POST request via verifyUser()');
     
     if (!otp || otp.length !== 6) {
       alert("Please enter a valid 6-digit OTP");
       return;
     }
     
+    // ✅ This makes the correct POST request
     verifyUser(Number(otp), navigate);
+  };
+
+  // ✅ ENTER KEY HANDLER
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleVerifyClick();
+    }
   };
 
   const handleResendOTP = () => {
@@ -87,11 +85,8 @@ const Verify = () => {
 
   return (
     <div className="flex justify-center items-center h-screen bg-gray-50">
-      {/* ✅ FIXED: Form with proper prevention */}
-      <form
-        className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md"
-        onSubmit={submitHandler}
-      >
+      {/* ✅ FORM WITH COMPLETE PREVENTION */}
+      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
         <div className="text-center mb-6">
           <h2 className="text-3xl font-bold text-gray-800 mb-2">Verify OTP</h2>
           <p className="text-gray-600">
@@ -99,79 +94,80 @@ const Verify = () => {
           </p>
         </div>
 
-        <div className="mb-6">
-          <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="otp">
-            Enter OTP:
-          </label>
-          <input
-            type="text"
-            id="otp"
-            name="otp"
-            value={otp}
-            onChange={handleOtpChange}
-            className="border-2 border-gray-300 p-3 w-full rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-center text-2xl font-mono tracking-widest"
-            placeholder="000000"
-            maxLength="6"
-            autoComplete="one-time-code"
-            required
-          />
-        </div>
+        {/* ✅ NO FORM TAG - JUST DIV TO PREVENT ANY SUBMISSION */}
+        <div onSubmit={handleFormSubmit}>
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="otp">
+              Enter OTP:
+            </label>
+            <input
+              type="text"
+              id="otp"
+              name="otp"
+              value={otp}
+              onChange={handleOtpChange}
+              onKeyDown={handleKeyDown}
+              className="border-2 border-gray-300 p-3 w-full rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-center text-2xl font-mono tracking-widest"
+              placeholder="000000"
+              maxLength="6"
+              autoComplete="one-time-code"
+            />
+          </div>
 
-        {/* Timer Display */}
-        <div className="text-center mb-4">
-          {!canResend ? (
-            <p className="text-sm text-gray-600">
-              OTP expires in: <span className="font-mono font-semibold text-red-600">{formatTime(timeLeft)}</span>
-            </p>
-          ) : (
-            <p className="text-sm text-red-600 font-medium">
-              OTP has expired
-            </p>
-          )}
-        </div>
+          {/* Timer Display */}
+          <div className="text-center mb-4">
+            {!canResend ? (
+              <p className="text-sm text-gray-600">
+                OTP expires in: <span className="font-mono font-semibold text-red-600">{formatTime(timeLeft)}</span>
+              </p>
+            ) : (
+              <p className="text-sm text-red-600 font-medium">
+                OTP has expired
+              </p>
+            )}
+          </div>
 
-        {/* ✅ FIXED: Button with direct click handler */}
-        <button 
-          type="button"
-          onClick={handleVerifyClick}
-          className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={btnLoading || otp.length !== 6}
-        >
-          {btnLoading ? <LoadingSpinner /> : "Verify OTP"}
-        </button>
-
-        {/* Resend OTP Button */}
-        <div className="text-center mt-4">
-          <button
+          {/* ✅ DIRECT BUTTON - NO FORM SUBMISSION */}
+          <button 
             type="button"
-            onClick={handleResendOTP}
-            disabled={!canResend || btnLoading}
-            className="text-blue-500 hover:text-blue-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleVerifyClick}
+            disabled={btnLoading || otp.length !== 6}
+            className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {canResend ? "Resend OTP" : "Resend available after timer expires"}
+            {btnLoading ? <LoadingSpinner /> : "Verify OTP"}
           </button>
-        </div>
 
-        {/* Back to Login */}
-        <div className="text-center mt-4">
-          <button
-            type="button"
-            onClick={() => navigate("/login")}
-            className="text-gray-500 hover:text-gray-700 text-sm underline"
-          >
-            Back to Login
-          </button>
+          {/* Resend OTP Button */}
+          <div className="text-center mt-4">
+            <button
+              type="button"
+              onClick={handleResendOTP}
+              disabled={!canResend || btnLoading}
+              className="text-blue-500 hover:text-blue-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {canResend ? "Resend OTP" : "Resend available after timer expires"}
+            </button>
+          </div>
+
+          {/* Back to Login */}
+          <div className="text-center mt-4">
+            <button
+              type="button"
+              onClick={() => navigate("/login")}
+              className="text-gray-500 hover:text-gray-700 text-sm underline"
+            >
+              Back to Login
+            </button>
+          </div>
         </div>
 
         {/* Debug info */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-4 p-2 bg-gray-100 rounded text-xs text-gray-600">
-            <p>🔍 Debug: Using button click (POST) instead of form submit (GET)</p>
-            <p>Backend: https://ai-character-chatbot-2.onrender.com</p>
-            <p>Endpoint: POST /api/user/verify</p>
-          </div>
-        )}
-      </form>
+        <div className="mt-4 p-2 bg-green-100 rounded text-xs text-green-800">
+          <p>✅ Fixed: No form submission - only button clicks</p>
+          <p>✅ Uses POST request via verifyUser() function</p>
+          <p>✅ No GET requests will be made</p>
+        </div>
+      </div>
     </div>
   );
 };

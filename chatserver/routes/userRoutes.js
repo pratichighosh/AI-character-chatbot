@@ -32,7 +32,24 @@ router.post("/login", async (req, res) => {
     });
   }
 });
-
+// ✅ TEMPORARY: Handle GET requests to verify (for debugging)
+router.get("/verify", (req, res) => {
+  console.log("⚠️ GET REQUEST TO VERIFY - This should not happen!");
+  console.log("⚠️ Query params:", req.query);
+  console.log("⚠️ This means frontend is making GET instead of POST");
+  
+  res.status(405).json({
+    error: "Method Not Allowed",
+    message: "Verify endpoint only accepts POST requests",
+    correctMethod: "POST",
+    correctBody: {
+      otp: "123456",
+      verifyToken: "your_token_here"
+    },
+    receivedMethod: "GET",
+    debugInfo: "Frontend should call verifyUser() function, not navigate to verify URL"
+  });
+});
 // ✅ FIXED VERIFY ROUTE - This will definitely work now
 router.post("/verify", async (req, res) => {
   console.log("🔍 === VERIFY ROUTE HIT - FIXED VERSION ===");
