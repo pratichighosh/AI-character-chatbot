@@ -1,4 +1,4 @@
-// REAL EMAIL VERSION - Replace your controllers/userControllers.js
+// controllers/userControllers.js - COMPLETE WORKING VERSION
 
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
@@ -12,7 +12,7 @@ export const loginUser = async (req, res) => {
   try {
     const { email } = req.body;
 
-    console.log(`\n🔐 === LOGIN REQUEST RECEIVED ===`);
+    console.log(`\n📧 === LOGIN REQUEST ===`);
     console.log(`📧 Email: ${email}`);
     console.log(`⏰ Time: ${new Date().toISOString()}`);
 
@@ -60,19 +60,15 @@ export const loginUser = async (req, res) => {
     console.log(`🎫 Verification token created (expires in 10 minutes)`);
 
     try {
-      console.log(`📤 === SENDING REAL OTP EMAIL ===`);
-      console.log(`📧 From: ${process.env.EMAIL_USERNAME}`);
-      console.log(`📧 To: ${cleanEmail}`);
-      console.log(`🔢 OTP: ${otp}`);
+      console.log(`📤 === SENDING OTP EMAIL ===`);
       
-      // Send REAL OTP email
+      // Send OTP email
       const emailResult = await sendMail(cleanEmail, otp);
       
       console.log(`\n🎉 === OTP EMAIL SENT SUCCESSFULLY ===`);
       console.log(`📨 Message ID: ${emailResult.messageId}`);
       console.log(`📤 Sent from: ${emailResult.sentFrom}`);
-      console.log(`📧 Sent to: ${emailResult.sentTo}`);
-      console.log(`⏰ Timestamp: ${emailResult.timestamp}`);
+      console.log(`📧 Sent to: ${emailResult.sentTo || cleanEmail}`);
 
       // Return success response
       res.json({
@@ -81,22 +77,17 @@ export const loginUser = async (req, res) => {
         email: cleanEmail,
         expiresIn: "10 minutes",
         emailSent: true,
-        sentFrom: emailResult.sentFrom
+        sentFrom: emailResult.sentFrom || process.env.EMAIL_USERNAME
       });
 
     } catch (emailError) {
       console.error(`\n❌ === FAILED TO SEND OTP EMAIL ===`);
-      console.error(`❌ Email service error:`, emailError.message);
-      console.error(`❌ Target email: ${cleanEmail}`);
-      console.error(`❌ Configured sender: ${process.env.EMAIL_USERNAME}`);
+      console.error(`❌ Email error:`, emailError.message);
       
       return res.status(500).json({
         message: "Failed to send OTP email. Please try again.",
         error: emailError.message,
-        emailConfigured: !!process.env.EMAIL_USERNAME,
-        senderEmail: process.env.EMAIL_USERNAME,
-        targetEmail: cleanEmail,
-        timestamp: new Date().toISOString()
+        emailConfigured: !!process.env.EMAIL_USERNAME
       });
     }
 
@@ -107,8 +98,7 @@ export const loginUser = async (req, res) => {
     
     res.status(500).json({
       message: "Internal server error",
-      error: error.message,
-      timestamp: new Date().toISOString()
+      error: error.message
     });
   }
 };
@@ -119,18 +109,24 @@ export const verifyUser = async (req, res) => {
 
     console.log(`\n🔍 === OTP VERIFICATION REQUEST ===`);
     console.log(`🔢 Received OTP: ${otp}`);
+    console.log(`🎫 Verify Token: ${verifyToken ? 'Present' : 'Missing'}`);
     console.log(`⏰ Time: ${new Date().toISOString()}`);
 
     if (!otp || !verifyToken) {
+      console.log(`❌ Missing required fields`);
       return res.status(400).json({ 
-        message: "OTP and verification token are required" 
+        message: "OTP and verification token are required",
+        received: {
+          otp: !!otp,
+          verifyToken: !!verifyToken
+        }
       });
     }
 
-    if (!/^\d{6}$/.test(otp)) {
+    if (!/^\d{6}$/.test(otp.toString())) {
       console.log(`❌ OTP format validation failed: ${otp}`);
       return res.status(400).json({ 
-        message: "OTP must be 6 digits" 
+        message: "OTP must be 6 digits"
       });
     }
 
@@ -140,13 +136,13 @@ export const verifyUser = async (req, res) => {
       console.log(`✅ Token verified successfully`);
       console.log(`📧 Token email: ${decoded.email}`);
       console.log(`🔑 Expected OTP: ${decoded.otp}`);
-      console.log(`🎫 Token generated: ${decoded.generated}`);
+      console.log(`🔑 Received OTP: ${otp}`);
 
       // Check if OTP matches
       if (Number(otp) !== decoded.otp) {
         console.log(`❌ OTP mismatch: received=${otp}, expected=${decoded.otp}`);
         return res.status(400).json({ 
-          message: "Invalid OTP. Please check and try again." 
+          message: "Invalid OTP. Please check and try again."
         });
       }
 
@@ -215,8 +211,7 @@ export const verifyUser = async (req, res) => {
     
     res.status(500).json({
       message: "Internal server error",
-      error: error.message,
-      timestamp: new Date().toISOString()
+      error: error.message
     });
   }
 };
