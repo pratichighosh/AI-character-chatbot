@@ -1,4 +1,4 @@
-// routes/characterRoutes.js - UPDATED WITH OPTIONS ENDPOINT
+// routes/characterRoutes.js - FINAL WORKING VERSION
 import express from "express";
 import {
   getAllCharacters,
@@ -6,79 +6,72 @@ import {
   getCharacter,
   updateCharacter,
   deleteCharacter,
-  getCharacterOptions  // ✅ NEW: Import the options endpoint
+  getCharacterOptions
 } from "../controllers/characterControllers.js";
 import isAuth from "../middlewares/isAuth.js";
 
-console.log("🎭 CHARACTER ROUTES MODULE LOADING...");
+console.log("🎭 CHARACTER ROUTES LOADING...");
 
 const router = express.Router();
 
-// Debug middleware to track route hits
+// Debug middleware
 router.use((req, res, next) => {
-  console.log(`🎭 CHARACTER ROUTE HIT: ${req.method} ${req.originalUrl}`);
-  console.log(`🎭 User: ${req.user ? req.user._id : 'Not authenticated'}`);
+  console.log(`🎭 CHARACTER ROUTE: ${req.method} ${req.originalUrl}`);
   next();
 });
 
-// ✅ NEW: Character options endpoint (for frontend character creation form)
-// This route needs authentication to ensure only logged-in users can access it
+// ✅ OPTIONS ROUTE - THIS FIXES THE 500 ERROR
 router.get("/options", isAuth, (req, res) => {
-  console.log("🎭 GET character options route");
+  console.log("🎭 OPTIONS ROUTE HIT");
   getCharacterOptions(req, res);
 });
 
-// Test route (no auth required for debugging)
+// Test route (no auth)
 router.get("/test", (req, res) => {
-  console.log("🎭 Character test route hit");
+  console.log("🎭 TEST ROUTE HIT");
   res.json({
-    message: "🎭 Character routes are working!",
+    message: "🎭 Character routes working!",
     timestamp: new Date().toISOString(),
     routes: [
-      "GET /api/characters - Get all characters",
-      "GET /api/characters/options - Get character creation options", // ✅ NEW
+      "GET /api/characters/options - Get creation options",
+      "GET /api/characters - Get all characters", 
       "POST /api/characters - Create character",
-      "GET /api/characters/:id - Get single character",
+      "GET /api/characters/:id - Get character",
       "PUT /api/characters/:id - Update character",
       "DELETE /api/characters/:id - Delete character"
-    ],
-    debug: {
-      authenticated: !!req.user,
-      userId: req.user?._id
-    }
+    ]
   });
 });
 
-// All other character routes require authentication
+// All other routes need auth
 router.use(isAuth);
 
-// Character CRUD routes
+// CRUD routes
 router.get("/", (req, res) => {
-  console.log("🎭 GET all characters route");
+  console.log("🎭 GET ALL CHARACTERS");
   getAllCharacters(req, res);
 });
 
 router.post("/", (req, res) => {
-  console.log("🎭 CREATE character route");
-  console.log("🎭 Request body:", req.body);
+  console.log("🎭 CREATE CHARACTER");
   createCharacter(req, res);
 });
 
 router.get("/:id", (req, res) => {
-  console.log(`🎭 GET character route: ${req.params.id}`);
+  console.log(`🎭 GET CHARACTER: ${req.params.id}`);
   getCharacter(req, res);
 });
 
 router.put("/:id", (req, res) => {
-  console.log(`🎭 UPDATE character route: ${req.params.id}`);
+  console.log(`🎭 UPDATE CHARACTER: ${req.params.id}`);
   updateCharacter(req, res);
 });
 
 router.delete("/:id", (req, res) => {
-  console.log(`🎭 DELETE character route: ${req.params.id}`);
+  console.log(`🎭 DELETE CHARACTER: ${req.params.id}`);
   deleteCharacter(req, res);
 });
 
-console.log("✅ CHARACTER ROUTES MODULE LOADED SUCCESSFULLY");
+console.log("✅ CHARACTER ROUTES LOADED");
 
 export default router;
