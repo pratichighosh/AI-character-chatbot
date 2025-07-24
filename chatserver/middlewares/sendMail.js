@@ -1,23 +1,22 @@
-// middlewares/sendMail.js - ENHANCED EMAIL SERVICE
-// ES Module version with improved error handling and robustness
+// middlewares/sendMail.js - ENHANCED EMAIL SERVICE WITH VERIFICATION
+// ✅ FIXED: Added email verification and better error handling
 
 import nodemailer from 'nodemailer';
 
-// Configuration
+// Configuration - Using your working credentials
 const SENDER_EMAIL = 'pratichighosh053@gmail.com';
 const SENDER_PASSWORD = 'afidwpueqljxgqhc';
 
 console.log('📧 === EMAIL SERVICE INITIALIZING ===');
-console.log('📧 sendMail.js loaded - WILL SEND FROM:', SENDER_EMAIL);
-console.log('✅ Email credentials configured');
+console.log('📧 Sender email:', SENDER_EMAIL);
 
-// Create transporter once and reuse it
+// ✅ ENHANCED: Create transporter with better configuration
 let transporter = null;
 
 const createTransporter = () => {
   if (!transporter) {
     console.log('🔧 Creating email transporter...');
-    transporter = nodemailer.createTransport({
+    transporter = nodemailer.createTransporter({
       service: 'gmail',
       host: 'smtp.gmail.com',
       port: 587,
@@ -26,38 +25,66 @@ const createTransporter = () => {
         user: SENDER_EMAIL,
         pass: SENDER_PASSWORD,
       },
-      // Additional options for better reliability
-      pool: true, // Use pooled connections
-      maxConnections: 3,
+      // ✅ ENHANCED: Additional options for better reliability
+      pool: true,
+      maxConnections: 5,
       maxMessages: 100,
-      rateDelta: 1000, // Rate limiting
-      rateLimit: 5
+      rateDelta: 1000,
+      rateLimit: 10,
+      tls: {
+        rejectUnauthorized: false // ✅ This helps with some email issues
+      }
     });
-    console.log('✅ Email transporter created with pooling enabled');
+    console.log('✅ Email transporter created');
   }
   return transporter;
 };
 
-// Verify email service on startup
+// ✅ CRITICAL: Verify email service with better testing
 const verifyEmailService = async () => {
   try {
+    console.log('🔍 === VERIFYING EMAIL SERVICE ===');
     const testTransporter = createTransporter();
+    
+    // Test the connection
     await testTransporter.verify();
-    console.log('✅ === EMAIL SERVICE READY ===');
     console.log('✅ SMTP connection verified successfully');
-    console.log('✅ Gmail service operational');
-    return true;
+    
+    // ✅ NEW: Test sending actual email to verify it works
+    try {
+      console.log('🧪 Testing actual email send...');
+      const testResult = await testTransporter.sendMail({
+        from: SENDER_EMAIL,
+        to: SENDER_EMAIL, // Send to self for testing
+        subject: '🧪 Email Service Test',
+        text: `Email service test at ${new Date().toISOString()}`
+      });
+      console.log('✅ Test email sent successfully:', testResult.messageId);
+      return true;
+    } catch (testError) {
+      console.error('❌ Test email failed:', testError.message);
+      // Don't fail completely, just warn
+      console.warn('⚠️ Email service may not work properly');
+      return false;
+    }
+    
   } catch (error) {
     console.error('❌ === EMAIL SERVICE VERIFICATION FAILED ===');
-    console.error('❌ SMTP verification error:', error.message);
-    console.error('❌ Email service may not work properly');
+    console.error('❌ Error:', error.message);
+    console.error('❌ Code:', error.code);
+    
+    // Check for common error codes
+    if (error.code === 'EAUTH') {
+      console.error('❌ AUTHENTICATION FAILED - Check email credentials');
+    } else if (error.code === 'ECONNECTION') {
+      console.error('❌ CONNECTION FAILED - Check internet connection');
+    }
+    
     return false;
   }
 };
 
-// Verify on module load
-verifyEmailService();
-
+// ✅ ENHANCED: Main email sending function with better error handling
 export const sendMail = async (email, otp) => {
   try {
     console.log(`\n📧 === SENDING OTP EMAIL ===`);
@@ -66,26 +93,33 @@ export const sendMail = async (email, otp) => {
     console.log(`🔢 OTP: ${otp}`);
     console.log(`⏰ Time: ${new Date().toISOString()}`);
 
-    // Validate inputs
+    // ✅ ENHANCED: Validate inputs more thoroughly
     if (!email || !otp) {
       throw new Error('Email and OTP are required');
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       throw new Error('Invalid email format');
     }
 
-    // Validate OTP format (should be 6 digits)
     if (!/^\d{6}$/.test(otp.toString())) {
       throw new Error('OTP must be 6 digits');
     }
 
-    // Get or create transporter
+    // ✅ CRITICAL: Test transporter before sending
     const emailTransporter = createTransporter();
+    
+    console.log('🔍 Verifying transporter before sending...');
+    try {
+      await emailTransporter.verify();
+      console.log('✅ Transporter verified');
+    } catch (verifyError) {
+      console.error('❌ Transporter verification failed:', verifyError.message);
+      throw new Error(`Email service not available: ${verifyError.message}`);
+    }
 
-    // Enhanced mail options with better styling
+    // ✅ ENHANCED: Better email template with clear formatting
     const mailOptions = {
       from: {
         name: '🤖 AI ChatBot - OTP Service',
@@ -94,100 +128,65 @@ export const sendMail = async (email, otp) => {
       to: email,
       subject: `🔐 Your ChatBot Login Code: ${otp}`,
       html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8fafc;">
-          <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;">
-            
-            <!-- Header -->
-            <div style="text-align: center; margin-bottom: 32px;">
-              <h1 style="color: #1e293b; margin: 0 0 8px 0; font-size: 28px; font-weight: 700;">🤖 AI ChatBot</h1>
-              <p style="color: #64748b; margin: 0; font-size: 16px;">Secure Login Verification</p>
-            </div>
-            
-            <!-- OTP Section -->
-            <div style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); padding: 24px; border-radius: 10px; margin: 24px 0; text-align: center;">
-              <p style="color: white; margin: 0 0 16px 0; font-size: 16px; font-weight: 500;">Your verification code is:</p>
-              <div style="background: white; padding: 20px; border-radius: 8px; display: inline-block; margin: 0 auto;">
-                <span style="font-size: 42px; font-weight: 800; color: #1e293b; letter-spacing: 12px; font-family: 'Courier New', monospace;">
-                  ${otp}
-                </span>
-              </div>
-            </div>
-            
-            <!-- Instructions -->
-            <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 16px; margin: 24px 0;">
-              <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <span style="font-size: 18px; margin-right: 8px;">⚡</span>
-                <strong style="color: #92400e; font-size: 14px;">Quick Instructions:</strong>
-              </div>
-              <ul style="color: #92400e; font-size: 14px; margin: 8px 0 0 0; padding-left: 20px;">
-                <li>Enter this code in your ChatBot login screen</li>
-                <li>Code expires in <strong>10 minutes</strong></li>
-                <li>Don't share this code with anyone</li>
-              </ul>
-            </div>
-            
-            <!-- Security Notice -->
-            <div style="background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 16px; margin: 24px 0;">
-              <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <span style="font-size: 18px; margin-right: 8px;">🔒</span>
-                <strong style="color: #dc2626; font-size: 14px;">Security Notice:</strong>
-              </div>
-              <p style="color: #dc2626; font-size: 14px; margin: 0; line-height: 1.4;">
-                If you didn't request this login code, please ignore this email. Your account remains secure.
-              </p>
-            </div>
-            
-            <!-- Footer -->
-            <div style="text-align: center; margin-top: 32px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-              <p style="color: #64748b; font-size: 12px; margin: 0;">
-                <strong>Sent from:</strong> ${SENDER_EMAIL}<br>
-                <strong>Time:</strong> ${new Date().toLocaleString()}<br>
-                <strong>IP:</strong> Secure Server • <strong>Service:</strong> AI ChatBot Authentication
-              </p>
-            </div>
-            
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; text-align: center; color: white;">
+            <h1 style="margin: 0;">🤖 AI ChatBot</h1>
+            <p style="margin: 10px 0 0 0;">Your verification code is ready!</p>
           </div>
           
-          <!-- Footer outside box -->
-          <div style="text-align: center; margin-top: 20px;">
-            <p style="color: #94a3b8; font-size: 11px; margin: 0;">
-              © 2025 AI ChatBot • Secure Authentication System • Powered by Gemini AI
+          <div style="background: #f8f9fa; padding: 30px; margin: 20px 0; border-radius: 10px; text-align: center;">
+            <h2 style="color: #333; margin: 0 0 20px 0;">Your OTP Code</h2>
+            <div style="background: white; padding: 20px; border-radius: 8px; border: 2px solid #667eea;">
+              <span style="font-size: 36px; font-weight: bold; color: #667eea; letter-spacing: 8px; font-family: monospace;">
+                ${otp}
+              </span>
+            </div>
+            <p style="margin: 20px 0 0 0; color: #666;">
+              This code expires in <strong>10 minutes</strong>
             </p>
+          </div>
+          
+          <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #856404; font-size: 14px;">
+              <strong>🔒 Security Notice:</strong> Never share this code with anyone. 
+              If you didn't request this, please ignore this email.
+            </p>
+          </div>
+          
+          <div style="text-align: center; color: #666; font-size: 12px; margin-top: 30px;">
+            <p>Sent from: ${SENDER_EMAIL}</p>
+            <p>Time: ${new Date().toLocaleString()}</p>
+            <p>© 2025 AI ChatBot - Secure Authentication</p>
           </div>
         </div>
       `,
       
-      // Plain text fallback for email clients that don't support HTML
       text: `
 🤖 AI ChatBot - Login Verification
 
 Your verification code is: ${otp}
 
-Instructions:
-• Enter this code in your ChatBot login screen
-• Code expires in 10 minutes  
-• Keep this code secure and don't share it
-
-If you didn't request this code, please ignore this email.
+⏰ This code expires in 10 minutes
+🔒 Never share this code with anyone
+📧 If you didn't request this, ignore this email
 
 Sent from: ${SENDER_EMAIL}
 Time: ${new Date().toLocaleString()}
-
-© 2025 AI ChatBot Authentication System
       `,
       
-      // Email headers for better deliverability
+      // ✅ ENHANCED: Better headers for deliverability
       headers: {
         'X-Priority': '1 (Highest)',
         'X-MSMail-Priority': 'High',
-        'Importance': 'high'
+        'Importance': 'high',
+        'X-Mailer': 'AI ChatBot Authentication System'
       }
     };
 
-    console.log('📤 Sending email with enhanced template...');
-    console.log('📧 Email size: ~' + Math.round(mailOptions.html.length / 1024) + 'KB');
+    console.log('📤 Sending email...');
+    console.log('📧 Email template size: ~' + Math.round(mailOptions.html.length / 1024) + 'KB');
 
-    // Send email with retry logic
+    // ✅ ENHANCED: Send with retry logic and better error handling
     let emailResult;
     let attempts = 0;
     const maxAttempts = 3;
@@ -198,16 +197,19 @@ Time: ${new Date().toLocaleString()}
         console.log(`📤 Send attempt ${attempts}/${maxAttempts}...`);
         
         emailResult = await emailTransporter.sendMail(mailOptions);
+        console.log(`✅ Email sent successfully on attempt ${attempts}`);
         break; // Success, exit retry loop
         
       } catch (sendError) {
         console.error(`❌ Send attempt ${attempts} failed:`, sendError.message);
+        console.error(`❌ Error code:`, sendError.code);
+        console.error(`❌ Error response:`, sendError.response);
         
         if (attempts >= maxAttempts) {
           throw sendError; // Final attempt failed
         }
         
-        // Wait before retrying (exponential backoff)
+        // Wait before retrying
         const delay = Math.pow(2, attempts) * 1000; // 2s, 4s, 8s
         console.log(`⏳ Retrying in ${delay/1000}s...`);
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -221,6 +223,7 @@ Time: ${new Date().toLocaleString()}
     console.log(`🔢 OTP: ${otp}`);
     console.log(`📊 Attempts: ${attempts}/${maxAttempts}`);
     console.log(`⏰ Sent at: ${new Date().toISOString()}`);
+    console.log(`📮 Response: ${emailResult.response}`);
 
     return {
       success: true,
@@ -230,49 +233,48 @@ Time: ${new Date().toLocaleString()}
       otp: otp,
       timestamp: new Date().toISOString(),
       attempts: attempts,
+      response: emailResult.response,
       emailSize: Math.round(mailOptions.html.length / 1024) + 'KB'
     };
 
   } catch (error) {
     console.error(`\n❌ === EMAIL SEND FAILED ===`);
     console.error(`❌ Error: ${error.message}`);
+    console.error(`❌ Error code: ${error.code}`);
+    console.error(`❌ Error response: ${error.response}`);
     console.error(`❌ Email: ${email}`);
     console.error(`❌ OTP: ${otp}`);
-    console.error(`❌ Full error:`, error);
     
-    // Enhanced error details
-    let errorDetails = {
-      type: 'EMAIL_SEND_ERROR',
-      message: error.message,
-      email: email,
-      timestamp: new Date().toISOString()
-    };
-
-    // Categorize common errors
-    if (error.message.includes('invalid login')) {
-      errorDetails.category = 'AUTHENTICATION_ERROR';
-      errorDetails.solution = 'Check Gmail credentials and app password';
-    } else if (error.message.includes('Network')) {
-      errorDetails.category = 'NETWORK_ERROR';
-      errorDetails.solution = 'Check internet connection';
-    } else if (error.message.includes('timeout')) {
-      errorDetails.category = 'TIMEOUT_ERROR';
-      errorDetails.solution = 'Gmail service may be slow, try again';
-    } else {
-      errorDetails.category = 'UNKNOWN_ERROR';
-      errorDetails.solution = 'Check server logs for details';
+    // ✅ ENHANCED: Better error categorization
+    let errorCategory = 'UNKNOWN_ERROR';
+    let solution = 'Check server logs';
+    
+    if (error.code === 'EAUTH') {
+      errorCategory = 'AUTHENTICATION_ERROR';
+      solution = 'Check Gmail credentials and app password';
+    } else if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT') {
+      errorCategory = 'NETWORK_ERROR';
+      solution = 'Check internet connection and Gmail service status';
+    } else if (error.code === 'EMESSAGE') {
+      errorCategory = 'MESSAGE_ERROR';
+      solution = 'Check email content and recipient address';
+    } else if (error.message.includes('Invalid login')) {
+      errorCategory = 'CREDENTIALS_ERROR';
+      solution = 'Verify Gmail username and app password';
     }
 
-    console.error('❌ Error details:', errorDetails);
+    console.error(`❌ Error category: ${errorCategory}`);
+    console.error(`❌ Suggested solution: ${solution}`);
     
-    throw new Error(`Email send failed: ${error.message}`);
+    throw new Error(`Email send failed (${errorCategory}): ${error.message}`);
   }
 };
 
-// Test function for debugging email service
-export const testEmailService = async (testEmail = 'test@example.com') => {
+// ✅ ENHANCED: Test function for debugging
+export const testEmailService = async (testEmail = SENDER_EMAIL) => {
   try {
     console.log('🧪 === TESTING EMAIL SERVICE ===');
+    console.log('🧪 Test email:', testEmail);
     
     const testOTP = '123456';
     const result = await sendMail(testEmail, testOTP);
@@ -294,7 +296,7 @@ export const testEmailService = async (testEmail = 'test@example.com') => {
   }
 };
 
-// Health check for email service
+// ✅ ENHANCED: Health check
 export const emailHealthCheck = async () => {
   try {
     const testTransporter = createTransporter();
@@ -304,6 +306,7 @@ export const emailHealthCheck = async () => {
       status: 'healthy',
       service: 'gmail',
       credentials: 'valid',
+      sender: SENDER_EMAIL,
       timestamp: new Date().toISOString()
     };
     
@@ -312,12 +315,22 @@ export const emailHealthCheck = async () => {
       status: 'unhealthy',
       service: 'gmail',
       error: error.message,
+      errorCode: error.code,
+      sender: SENDER_EMAIL,
       timestamp: new Date().toISOString()
     };
   }
 };
 
+// ✅ CRITICAL: Test email service on startup
+verifyEmailService().then(result => {
+  if (result) {
+    console.log('🎉 EMAIL SERVICE READY FOR PRODUCTION!');
+  } else {
+    console.error('⚠️ EMAIL SERVICE MAY HAVE ISSUES!');
+  }
+});
+
 console.log('✅ === EMAIL SERVICE MODULE LOADED ===');
-console.log('✅ Functions exported: sendMail, testEmailService, emailHealthCheck');
 
 export default sendMail;

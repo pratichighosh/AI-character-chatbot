@@ -396,7 +396,100 @@ ${selectedCharacter}:`;
     res.status(500).json({ success: false, error: error.message });
   }
 });
+// ADD THIS TO YOUR backend/index.js (after the other test endpoints)
 
+// ✅ NEW: Test email service endpoint
+app.post("/test-email", async (req, res) => {
+  try {
+    console.log("🧪 Testing email service...");
+    
+    const { email } = req.body;
+    const testEmail = email || 'pratichighosh053@gmail.com'; // Default to your email
+    const testOTP = '123456';
+    
+    console.log(`📧 Testing email send to: ${testEmail}`);
+    
+    // Import email function
+    const { sendMail } = await import("./middlewares/sendMail.js");
+    
+    // Test sending email
+    const result = await sendMail(testEmail, testOTP);
+    
+    console.log("✅ Email test successful:", result);
+    
+    res.json({
+      success: true,
+      message: "✅ Test email sent successfully!",
+      details: {
+        messageId: result.messageId,
+        sentTo: result.sentTo,
+        sentFrom: result.sentFrom,
+        testOTP: testOTP,
+        timestamp: result.timestamp,
+        attempts: result.attempts
+      },
+      instructions: `Check ${testEmail} for the test OTP: ${testOTP}`
+    });
+    
+  } catch (error) {
+    console.error("❌ Email test failed:", error);
+    
+    res.status(500).json({
+      success: false,
+      message: "❌ Email test failed",
+      error: error.message,
+      troubleshooting: {
+        possibleCauses: [
+          "Gmail credentials incorrect",
+          "App password not set up",
+          "Network connectivity issues",
+          "Gmail blocking the request"
+        ],
+        solutions: [
+          "Verify Gmail username and app password",
+          "Check if 2FA is enabled on Gmail",
+          "Try with a different email service",
+          "Check server network connectivity"
+        ]
+      }
+    });
+  }
+});
+
+// ✅ NEW: Email health check endpoint
+app.get("/test-email-health", async (req, res) => {
+  try {
+    console.log("🏥 Checking email service health...");
+    
+    const { emailHealthCheck } = await import("./middlewares/sendMail.js");
+    const healthResult = await emailHealthCheck();
+    
+    console.log("📊 Email health check result:", healthResult);
+    
+    if (healthResult.status === 'healthy') {
+      res.json({
+        status: "✅ Email service is healthy",
+        details: healthResult,
+        message: "Email service is ready to send OTPs"
+      });
+    } else {
+      res.status(500).json({
+        status: "❌ Email service has issues",
+        details: healthResult,
+        message: "Email service may not work properly"
+      });
+    }
+    
+  } catch (error) {
+    console.error("❌ Email health check failed:", error);
+    
+    res.status(500).json({
+      status: "❌ Email health check failed",
+      error: error.message,
+      message: "Could not verify email service status"
+    });
+  }
+});
 // Health Check (PRESERVED)
 app.get("/health", (req, res) => {
   res.json({

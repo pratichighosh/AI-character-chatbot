@@ -1,3 +1,4 @@
+// pages/Verify.jsx - FIXED VERSION
 import React, { useState, useEffect } from "react";
 import { UserData } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -36,32 +37,32 @@ const Verify = () => {
     }
   }, [navigate]);
 
-  // ✅ FIXED: Ensure form submits POST request
+  // ✅ FIXED: Ensure form submits correctly
   const submitHandler = (e) => {
-    e.preventDefault(); // Prevent default form submission
-    e.stopPropagation(); // Stop event bubbling
+    e.preventDefault();
+    e.stopPropagation();
     
     console.log('🔍 Form submitted - verifying OTP:', otp);
+    console.log('🌐 Backend server URL check:', import.meta.env.VITE_SERVER_URL || 'Using default');
     
     if (!otp || otp.length !== 6) {
       alert("Please enter a valid 6-digit OTP");
       return;
     }
     
-    // ✅ FIXED: Call verifyUser correctly (this should make POST request)
+    // ✅ FIXED: Call verifyUser with proper error handling
     verifyUser(Number(otp), navigate);
   };
 
   const handleResendOTP = () => {
-    setTimeLeft(600); // Reset timer
+    setTimeLeft(600);
     setCanResend(false);
-    setOtp(""); // Clear current OTP
+    setOtp("");
     resendOTP(navigate);
   };
 
   const handleOtpChange = (e) => {
     const value = e.target.value;
-    // Only allow numbers and limit to 6 digits
     if (/^\d{0,6}$/.test(value)) {
       setOtp(value);
     }
@@ -145,12 +146,13 @@ const Verify = () => {
           </button>
         </div>
 
-        {/* Debug info */}
+        {/* ✅ NEW: Debug info to check URL */}
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-4 p-2 bg-gray-100 rounded text-xs text-gray-600">
-            <p>Debug: OTP verification will use POST method</p>
-            <p>Backend: https://ai-character-chatbot-2.onrender.com</p>
-            <p>Endpoint: POST /api/user/verify</p>
+            <p>🔍 Debug Info:</p>
+            <p>Backend URL: {import.meta.env.VITE_SERVER_URL || 'https://ai-character-chatbot-2.onrender.com'}</p>
+            <p>Verify endpoint: {import.meta.env.VITE_SERVER_URL || 'https://ai-character-chatbot-2.onrender.com'}/api/user/verify</p>
+            <p>Method: POST</p>
           </div>
         )}
       </form>

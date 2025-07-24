@@ -1,3 +1,4 @@
+// context/UserContext.jsx - FIXED VERSION WITH COMPLETE DEBUGGING
 import { createContext, useContext, useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import axios from "axios";
@@ -11,7 +12,7 @@ export const UserProvider = ({ children }) => {
   const [isAuth, setIsAuth] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Login function - Send OTP to email
+  // ✅ FIXED: Login function with better debugging
   async function loginUser(email, navigate) {
     if (!email || !email.trim()) {
       toast.error("Please enter a valid email address");
@@ -20,17 +21,29 @@ export const UserProvider = ({ children }) => {
 
     setBtnLoading(true);
     try {
-      console.log(`📧 Sending login request for: ${email}`);
+      console.log(`\n📧 === LOGIN REQUEST STARTING ===`);
+      console.log(`📧 Email: ${email}`);
+      console.log(`🌐 Server URL: ${server}`);
+      console.log(`📤 Full URL: ${server}/api/user/login`);
       
       const { data } = await axios.post(`${server}/api/user/login`, { 
         email: email.trim().toLowerCase() 
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000,
       });
 
       console.log("✅ Login request successful:", data.message);
+      console.log("📨 Response data:", data);
+      
       toast.success(data.message);
       
       // Store verification token for OTP verification
       localStorage.setItem("verifyToken", data.verifyToken);
+      
+      console.log("🎫 Verify token stored in localStorage");
       
       // Navigate to verification page
       navigate("/verify");
@@ -41,10 +54,13 @@ export const UserProvider = ({ children }) => {
       const errorMessage = error.response?.data?.message || "Failed to send OTP. Please try again.";
       toast.error(errorMessage);
       
-      // Log additional debug info
-      if (error.response?.data?.emailConfigured === false) {
-        console.error("❌ Email not configured on server");
-        toast.error("Email service not configured. Please contact support.");
+      // Enhanced error logging
+      if (error.response) {
+        console.error("❌ Response status:", error.response.status);
+        console.error("❌ Response data:", error.response.data);
+      } else if (error.request) {
+        console.error("❌ Network error - no response received");
+        toast.error("Network error: Cannot reach server");
       }
       
     } finally {
@@ -52,7 +68,7 @@ export const UserProvider = ({ children }) => {
     }
   }
 
-  // Verify OTP function
+  // ✅ FIXED: Enhanced verify function with comprehensive debugging
   async function verifyUser(otp, navigate, fetchChats) {
     const verifyToken = localStorage.getItem("verifyToken");
     
@@ -70,14 +86,56 @@ export const UserProvider = ({ children }) => {
     setBtnLoading(true);
     
     try {
-      console.log(`🔍 Verifying OTP: ${otp}`);
+      console.log(`\n🔍 === OTP VERIFICATION STARTING ===`);
+      console.log(`🔢 OTP: ${otp}`);
+      console.log(`🎫 Token: ${verifyToken ? 'Present' : 'Missing'}`);
+      console.log(`🌐 Server URL: ${server}`);
+      console.log(`📤 Full URL: ${server}/api/user/verify`);
+      console.log(`⏰ Time: ${new Date().toISOString()}`);
       
-      const { data } = await axios.post(`${server}/api/user/verify`, {
+      // ✅ CRITICAL: Test server connectivity first
+      console.log(`🔍 Testing server connectivity...`);
+      try {
+        const pingResponse = await axios.get(`${server}/health`, {
+          timeout: 10000
+        });
+        console.log(`✅ Server ping successful:`, pingResponse.status);
+        console.log(`📊 Health check data:`, pingResponse.data);
+        
+        // Check if user routes are available from health endpoint
+        if (pingResponse.data?.criticalEndpoints?.["/api/user/verify"]) {
+          console.log(`✅ Verify endpoint status:`, pingResponse.data.criticalEndpoints["/api/user/verify"]);
+        }
+      } catch (pingError) {
+        console.error(`❌ Server ping failed:`, pingError.message);
+        toast.error("Cannot connect to server. Please try again.");
+        setBtnLoading(false);
+        return;
+      }
+
+      // ✅ CRITICAL: Make the verification request with detailed logging
+      console.log(`📤 Making POST request to: ${server}/api/user/verify`);
+      
+      const requestData = {
         otp: Number(otp),
         verifyToken,
+      };
+      
+      console.log(`📋 Request data:`, requestData);
+      
+      // ✅ FIXED: Enhanced axios request with proper headers and error handling
+      const { data } = await axios.post(`${server}/api/user/verify`, requestData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        timeout: 30000, // 30 second timeout
+        withCredentials: false, // Don't send cookies to avoid CORS issues
       });
 
-      console.log("✅ OTP verification successful:", data.message);
+      console.log(`✅ === OTP VERIFICATION SUCCESSFUL ===`);
+      console.log(`📨 Response:`, data);
+      
       toast.success(data.message);
       
       // Clear old storage and set new authentication token
@@ -97,19 +155,62 @@ export const UserProvider = ({ children }) => {
       navigate("/");
       
     } catch (error) {
-      console.error("❌ Verification error:", error);
+      console.error(`\n❌ === OTP VERIFICATION FAILED ===`);
+      console.error(`❌ Error type:`, error.name);
+      console.error(`❌ Error message:`, error.message);
       
-      const errorMessage = error.response?.data?.message || "OTP verification failed. Please try again.";
-      toast.error(errorMessage);
-      
-      // Handle specific error cases
-      if (error.response?.data?.expired) {
-        toast.error("OTP has expired. Please request a new one.");
-        setTimeout(() => navigate("/login"), 2000);
-      } else if (error.response?.data?.invalid) {
-        toast.error("Invalid verification token. Please try login again.");
-        localStorage.clear();
-        setTimeout(() => navigate("/login"), 2000);
+      // ✅ ENHANCED: Detailed error analysis for debugging
+      if (error.response) {
+        // Server responded with error status
+        console.error(`❌ Response status:`, error.response.status);
+        console.error(`❌ Response headers:`, error.response.headers);
+        console.error(`❌ Response data:`, error.response.data);
+        
+        if (error.response.status === 404) {
+          console.error(`\n❌ === 404 ERROR ANALYSIS ===`);
+          console.error(`❌ Route not found: POST ${server}/api/user/verify`);
+          console.error(`❌ Possible causes:`);
+          console.error(`   1. Backend user routes not mounted properly`);
+          console.error(`   2. Wrong server URL: ${server}`);
+          console.error(`   3. Backend not deployed or crashed`);
+          console.error(`   4. CORS blocking the request`);
+          
+          // Test if the route exists with a simple GET
+          try {
+            console.log(`🔍 Testing if backend is reachable...`);
+            const testResponse = await axios.get(`${server}/`, { timeout: 5000 });
+            console.log(`✅ Backend root accessible:`, testResponse.status);
+            console.log(`📊 Backend info:`, testResponse.data);
+          } catch (testError) {
+            console.error(`❌ Backend completely unreachable:`, testError.message);
+          }
+          
+          toast.error("Server error: OTP verification endpoint not found. Please contact support.");
+          
+        } else if (error.response.status === 400) {
+          const errorMessage = error.response.data?.message || "Invalid OTP or token";
+          toast.error(errorMessage);
+          
+          if (error.response.data?.expired) {
+            setTimeout(() => navigate("/login"), 2000);
+          }
+        } else if (error.response.status === 500) {
+          console.error(`❌ Server internal error:`, error.response.data);
+          toast.error("Server error occurred. Please try again.");
+        } else {
+          const errorMessage = error.response.data?.message || "OTP verification failed";
+          toast.error(errorMessage);
+        }
+      } else if (error.request) {
+        // Request made but no response received
+        console.error(`❌ Network error - no response received`);
+        console.error(`❌ Request details:`, error.request);
+        console.error(`❌ This could be CORS, network, or server down`);
+        toast.error("Network error: Cannot reach server. Please check your connection.");
+      } else {
+        // Request setup error
+        console.error(`❌ Request setup error:`, error.message);
+        toast.error("Request error: " + error.message);
       }
       
     } finally {
@@ -117,7 +218,7 @@ export const UserProvider = ({ children }) => {
     }
   }
 
-  // Fetch current user profile
+  // ✅ ENHANCED: Fetch user profile with better error handling
   async function fetchUser() {
     try {
       const token = localStorage.getItem("token");
@@ -131,10 +232,11 @@ export const UserProvider = ({ children }) => {
       console.log("👤 Fetching user profile...");
 
       const { data } = await axios.get(`${server}/api/user/me`, {
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 15000,
+      });
 
       console.log("✅ User profile fetched:", data.email);
       
@@ -145,7 +247,6 @@ export const UserProvider = ({ children }) => {
     } catch (error) {
       console.error("❌ Fetch user error:", error);
       
-      // Clear invalid token
       if (error.response?.status === 403) {
         console.log("🔄 Clearing invalid authentication token");
         localStorage.clear();
@@ -158,7 +259,7 @@ export const UserProvider = ({ children }) => {
     }
   }
 
-  // Logout function
+  // Logout function - preserved as is
   const logoutHandler = (navigate) => {
     console.log("🚪 User logging out");
     localStorage.clear();
@@ -170,7 +271,7 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // Resend OTP function
+  // Resend OTP function - preserved as is
   const resendOTP = async (navigate) => {
     const verifyToken = localStorage.getItem("verifyToken");
     
@@ -181,7 +282,6 @@ export const UserProvider = ({ children }) => {
     }
 
     try {
-      // Decode token to get email (basic decode, not verification)
       const payload = JSON.parse(atob(verifyToken.split('.')[1]));
       console.log("🔄 Resending OTP to:", payload.email);
       
@@ -195,7 +295,6 @@ export const UserProvider = ({ children }) => {
     }
   };
 
-  // Check authentication on app load
   useEffect(() => {
     fetchUser();
   }, []);
