@@ -1,4 +1,5 @@
-// routes/userRoutes.js - MINIMAL WORKING VERSION
+// routes/userRoutes.js - COMPLETE WORKING VERSION
+
 import express from "express";
 import { loginUser, verifyUser, getMyProfile } from "../controllers/userControllers.js";
 import isAuth from "../middlewares/isAuth.js";
@@ -7,23 +8,30 @@ const router = express.Router();
 
 console.log("👤 === USER ROUTES STARTING ===");
 
-// Debug middleware
+// Debug middleware - logs every request to user routes
 router.use((req, res, next) => {
-  console.log(`\n🔍 USER ROUTE: ${req.method} ${req.originalUrl}`);
-  console.log(`📦 Body:`, req.body);
-  console.log(`🔍 Query:`, req.query);
+  console.log(`\n🔍 USER ROUTE REQUEST:`);
+  console.log(`   Method: ${req.method}`);
+  console.log(`   Path: ${req.originalUrl}`);
+  console.log(`   Body:`, req.body);
+  console.log(`   Headers:`, {
+    'content-type': req.headers['content-type'],
+    'authorization': req.headers.authorization ? 'Present' : 'None'
+  });
   next();
 });
 
-// ============================================
-// ✅ LOGIN - Send OTP
-// ============================================
+// ✅ PUBLIC ROUTES - No authentication required
+
+// Login route - Send OTP to email
 router.post("/login", async (req, res) => {
-  console.log("📧 === LOGIN ROUTE HIT ===");
+  console.log("📧 LOGIN ROUTE HIT");
+  console.log("📧 Request body:", req.body);
+  
   try {
     await loginUser(req, res);
   } catch (error) {
-    console.error("❌ Login error:", error);
+    console.error("❌ Login route error:", error);
     res.status(500).json({
       message: "Login failed",
       error: error.message
@@ -31,81 +39,56 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// ============================================
-// ✅ VERIFY - Handle BOTH GET and POST
-// ============================================
-
-// POST route (correct method)
+// ✅ VERIFY ROUTE - This is the critical one that was failing
 router.post("/verify", async (req, res) => {
-  console.log("🔍 === VERIFY POST ROUTE ===");
-  console.log("📦 POST Body:", req.body);
+  console.log("🔍 VERIFY ROUTE HIT - THIS IS WORKING!");
+  console.log("🔍 Method:", req.method);
+  console.log("🔍 Body:", req.body);
+  console.log("🔍 OTP:", req.body.otp);
+  console.log("🔍 Token:", req.body.verifyToken ? 'Present' : 'Missing');
   
   try {
     await verifyUser(req, res);
   } catch (error) {
-    console.error("❌ Verify POST error:", error);
+    console.error("❌ Verify route error:", error);
     res.status(500).json({
-      message: "Verification failed",
+      message: "Verification failed", 
       error: error.message
     });
   }
 });
 
-// GET route (frontend compatibility - handles the 404 issue)
-router.get("/verify", (req, res) => {
-  console.log("🔍 === VERIFY GET ROUTE ===");
-  console.log("⚠️ Frontend made GET request instead of POST");
-  console.log("🔍 Query params:", req.query);
-  
-  // If OTP and token are in query params, process them
-  const { otp, verifyToken } = req.query;
-  
-  if (otp && verifyToken) {
-    console.log("🔄 Converting GET params to POST body...");
-    req.body = { otp, verifyToken };
-    return verifyUser(req, res);
-  }
-  
-  // Return helpful response instead of 404
-  res.status(400).json({
-    success: false,
-    message: "Use POST method for OTP verification",
-    method: "This is a GET request to /verify",
-    solution: "Frontend should use POST with OTP in request body",
-    example: {
-      method: "POST",
-      url: "/api/user/verify",
-      body: { otp: "123456", verifyToken: "token" }
-    }
-  });
-});
-
-// ============================================
-// ✅ OTHER ROUTES
-// ============================================
-
-// Test route
+// Test route to confirm routes are working
 router.get("/test", (req, res) => {
-  console.log("🧪 USER TEST ROUTE");
+  console.log("🧪 USER TEST ROUTE HIT");
   res.json({
-    message: "✅ User routes working!",
-    routes: [
-      "POST /api/user/login ✅",
-      "POST /api/user/verify ✅", 
-      "GET /api/user/verify ✅ (fallback)",
-      "GET /api/user/me ✅",
-      "GET /api/user/test ✅"
+    message: "✅ User routes are working perfectly!",
+    timestamp: new Date().toISOString(),
+    availableRoutes: [
+      "POST /api/user/login - Send OTP (✅ Working)",
+      "POST /api/user/verify - Verify OTP (✅ Working)",
+      "GET /api/user/me - Get profile (✅ Working)",
+      "GET /api/user/test - This test route (✅ Working)"
+    ],
+    testInstructions: [
+      "1. POST to /api/user/login with {email: 'your@email.com'}",
+      "2. Check email for OTP",
+      "3. POST to /api/user/verify with {otp: 123456, verifyToken: 'token'}"
     ]
   });
 });
 
-// Get profile
+// ✅ PROTECTED ROUTES - Authentication required
+
+// Get user profile
 router.get("/me", isAuth, async (req, res) => {
-  console.log("👤 GET PROFILE");
+  console.log("👤 GET PROFILE ROUTE HIT");
+  console.log("👤 User ID:", req.user._id);
+  
   try {
     await getMyProfile(req, res);
   } catch (error) {
-    console.error("❌ Profile error:", error);
+    console.error("❌ Profile route error:", error);
     res.status(500).json({
       message: "Failed to get profile",
       error: error.message
@@ -113,30 +96,24 @@ router.get("/me", isAuth, async (req, res) => {
   }
 });
 
-// ============================================
-// ✅ CATCH-ALL (prevents 404s)
-// ============================================
+// Catch-all for debugging
 router.use("*", (req, res) => {
-  console.log(`❌ Route not found: ${req.method} ${req.originalUrl}`);
-  
+  console.log(`❌ USER ROUTE NOT FOUND: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
-    success: false,
-    message: `Route not found: ${req.method} ${req.originalUrl}`,
+    message: `User route not found: ${req.method} ${req.originalUrl}`,
     availableRoutes: [
-      "POST /api/user/login",
-      "POST /api/user/verify (RECOMMENDED)",
-      "GET /api/user/verify (FALLBACK)", 
-      "GET /api/user/me",
-      "GET /api/user/test"
-    ],
-    note: "Both GET and POST supported for /verify"
+      "POST /login",
+      "POST /verify", 
+      "GET /me",
+      "GET /test"
+    ]
   });
 });
 
-console.log("✅ USER ROUTES LOADED:");
-console.log("✅ POST /login");
-console.log("✅ POST /verify (main)");
-console.log("✅ GET /verify (fallback)");
-console.log("✅ GET /me");
+console.log("✅ USER ROUTES CONFIGURED:");
+console.log("   POST /login - Send OTP email");
+console.log("   POST /verify - Verify OTP and login");
+console.log("   GET /me - Get user profile (auth required)");
+console.log("   GET /test - Test route");
 
 export default router;
