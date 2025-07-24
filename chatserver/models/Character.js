@@ -1,4 +1,4 @@
-// models/Character.js - FIXED SYSTEMPROMPT GENERATION
+// models/Character.js - UPDATED TO SUPPORT ALL FRONTEND FIELDS
 import mongoose from "mongoose";
 
 const personalityTraits = [
@@ -72,25 +72,28 @@ const characterSchema = new mongoose.Schema(
     background: {
       type: String,
       trim: true,
-      maxlength: [500, "Background too long"],
+      maxlength: [1000, "Background too long"],
       default: ""
     },
     
+    // ✅ UPDATED: Support all languages from frontend
     primaryLanguage: {
       type: String,
-      enum: ['english', 'hindi', 'bengali', 'multilingual'],
+      enum: ['english', 'hindi', 'bengali', 'spanish', 'french', 'german', 'italian', 'portuguese', 'russian', 'japanese', 'korean', 'chinese', 'arabic', 'multilingual'],
       default: 'english'
     },
     
+    // ✅ UPDATED: Expertise areas as array
     expertise: [{
       type: String,
       trim: true,
       maxlength: [50, "Expertise area too long"]
     }],
     
+    // ✅ UPDATED: Support all response styles from frontend
     responseStyle: {
       type: String,
-      enum: ['conversational', 'educational', 'supportive', 'analytical', 'creative', 'advisory'],
+      enum: ['conversational', 'educational', 'supportive', 'analytical', 'creative', 'professional', 'casual', 'enthusiastic', 'calm', 'humorous', 'philosophical', 'practical'],
       default: 'conversational'
     },
     
@@ -119,6 +122,7 @@ const characterSchema = new mongoose.Schema(
       default: false
     },
     
+    // ✅ UPDATED: Support all categories from frontend
     category: {
       type: String,
       enum: {
@@ -207,8 +211,26 @@ function generateSystemPrompt(character) {
     case 'creative':
       styleGuidance = "Be imaginative, artistic and think outside the box.";
       break;
-    case 'advisory':
-      styleGuidance = "Provide helpful advice and practical guidance.";
+    case 'professional':
+      styleGuidance = "Maintain professional demeanor and business-like approach.";
+      break;
+    case 'casual':
+      styleGuidance = "Be relaxed, informal and conversational.";
+      break;
+    case 'enthusiastic':
+      styleGuidance = "Show energy, excitement and passion in responses.";
+      break;
+    case 'calm':
+      styleGuidance = "Maintain peaceful, soothing and tranquil tone.";
+      break;
+    case 'humorous':
+      styleGuidance = "Use humor, jokes and entertainment in responses.";
+      break;
+    case 'philosophical':
+      styleGuidance = "Approach topics with deep thinking and philosophical insight.";
+      break;
+    case 'practical':
+      styleGuidance = "Focus on practical solutions and actionable advice.";
       break;
     default:
       styleGuidance = "Maintain natural, engaging conversation.";

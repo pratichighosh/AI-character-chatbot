@@ -28,7 +28,7 @@ dotenv.config();
 
 const app = express();
 
-// STEP 3: MIDDLEWARE SETUP
+// STEP 3: MIDDLEWARE SETUP - EXACTLY AS YOUR ORIGINAL
 app.use(cors({
   origin: "https://ai-character-chatbot-one.vercel.app",
   credentials: true,
@@ -155,6 +155,7 @@ if (characterRoutes) {
         ],
         endpoints: [
           "GET /api/characters - Get all characters (requires auth)",
+          "GET /api/characters/options - Get character creation options (requires auth)",
           "POST /api/characters - Create character (requires auth)",
           "GET /api/characters/:id - Get single character (requires auth)",
           "PUT /api/characters/:id - Update character (requires auth)", 

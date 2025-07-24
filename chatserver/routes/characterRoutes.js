@@ -1,11 +1,12 @@
-// routes/characterRoutes.js - UPDATED WITH DEBUGGING
+// routes/characterRoutes.js - UPDATED WITH OPTIONS ENDPOINT
 import express from "express";
-import { 
-  getAllCharacters, 
-  createCharacter, 
-  getCharacter, 
-  updateCharacter, 
-  deleteCharacter 
+import {
+  getAllCharacters,
+  createCharacter,
+  getCharacter,
+  updateCharacter,
+  deleteCharacter,
+  getCharacterOptions  // ✅ NEW: Import the options endpoint
 } from "../controllers/characterControllers.js";
 import isAuth from "../middlewares/isAuth.js";
 
@@ -20,20 +21,25 @@ router.use((req, res, next) => {
   next();
 });
 
-// All character routes require authentication
-router.use(isAuth);
+// ✅ NEW: Character options endpoint (for frontend character creation form)
+// This route needs authentication to ensure only logged-in users can access it
+router.get("/options", isAuth, (req, res) => {
+  console.log("🎭 GET character options route");
+  getCharacterOptions(req, res);
+});
 
 // Test route (no auth required for debugging)
 router.get("/test", (req, res) => {
   console.log("🎭 Character test route hit");
-  res.json({ 
+  res.json({
     message: "🎭 Character routes are working!",
     timestamp: new Date().toISOString(),
     routes: [
       "GET /api/characters - Get all characters",
+      "GET /api/characters/options - Get character creation options", // ✅ NEW
       "POST /api/characters - Create character",
       "GET /api/characters/:id - Get single character",
-      "PUT /api/characters/:id - Update character", 
+      "PUT /api/characters/:id - Update character",
       "DELETE /api/characters/:id - Delete character"
     ],
     debug: {
@@ -42,6 +48,9 @@ router.get("/test", (req, res) => {
     }
   });
 });
+
+// All other character routes require authentication
+router.use(isAuth);
 
 // Character CRUD routes
 router.get("/", (req, res) => {

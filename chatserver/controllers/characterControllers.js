@@ -1,5 +1,102 @@
-// controllers/characterControllers.js - COMPLETE REPLACEMENT
+// controllers/characterControllers.js - COMPLETE REPLACEMENT WITH OPTIONS ENDPOINT
 import { Character } from "../models/Character.js";
+
+// ✅ NEW: Get character creation options (for frontend form)
+export const getCharacterOptions = async (req, res) => {
+  try {
+    console.log("🎭 GET CHARACTER OPTIONS - Starting...");
+    
+    // Define all the options for character creation
+    const characterOptions = {
+      personalityTraits: [
+        "Wise and thoughtful, speaks with deep understanding",
+        "Curious and analytical, loves exploring ideas", 
+        "Friendly and encouraging, always supportive",
+        "Humorous and witty, uses jokes and metaphors",
+        "Calm and patient, speaks slowly and clearly",
+        "Energetic and enthusiastic, very expressive",
+        "Mysterious and philosophical, speaks in riddles",
+        "Professional and formal, business-like approach",
+        "Creative and artistic, thinks outside the box",
+        "Practical and direct, gets straight to the point",
+        "Empathetic and caring, emotionally supportive",
+        "Intellectual and scholarly, loves complex topics",
+        "Playful and childlike, maintains wonder and joy",
+        "Bold and confident, takes charge of situations",
+        "Gentle and nurturing, like a caring teacher"
+      ],
+      speakingStyles: [
+        "Uses scientific metaphors and explains things logically",
+        "Speaks in poetic, beautiful language with imagery",
+        "Uses simple, clear explanations that anyone can understand",
+        "Tells stories and examples to make points",
+        "Asks thoughtful questions to guide learning",
+        "Uses humor and jokes to make conversations fun",
+        "Speaks formally with proper grammar and vocabulary",
+        "Uses modern slang and casual expressions",
+        "Gives step-by-step instructions and practical advice",
+        "Speaks philosophically about deeper meanings",
+        "Uses encouraging words and positive reinforcement",
+        "Challenges ideas and plays devil's advocate",
+        "Speaks dramatically with lots of emotion",
+        "Uses technical terms and industry jargon",
+        "Keeps responses short and to the point"
+      ],
+      languages: [
+        { value: 'english', label: 'English' },
+        { value: 'hindi', label: 'Hindi' },
+        { value: 'bengali', label: 'Bengali' },
+        { value: 'spanish', label: 'Spanish' },
+        { value: 'french', label: 'French' },
+        { value: 'german', label: 'German' },
+        { value: 'italian', label: 'Italian' },
+        { value: 'portuguese', label: 'Portuguese' },
+        { value: 'russian', label: 'Russian' },
+        { value: 'japanese', label: 'Japanese' },
+        { value: 'korean', label: 'Korean' },
+        { value: 'chinese', label: 'Chinese (Mandarin)' },
+        { value: 'arabic', label: 'Arabic' },
+        { value: 'multilingual', label: 'Multilingual' }
+      ],
+      responseStyles: [
+        { value: 'conversational', label: 'Conversational - Natural, flowing dialogue' },
+        { value: 'educational', label: 'Educational - Teaching and explaining' },
+        { value: 'supportive', label: 'Supportive - Encouraging and helpful' },
+        { value: 'analytical', label: 'Analytical - Logical and detailed' },
+        { value: 'creative', label: 'Creative - Imaginative and artistic' },
+        { value: 'professional', label: 'Professional - Business-like and formal' },
+        { value: 'casual', label: 'Casual - Relaxed and informal' },
+        { value: 'enthusiastic', label: 'Enthusiastic - Energetic and excited' },
+        { value: 'calm', label: 'Calm - Peaceful and soothing' },
+        { value: 'humorous', label: 'Humorous - Funny and entertaining' },
+        { value: 'philosophical', label: 'Philosophical - Deep and thoughtful' },
+        { value: 'practical', label: 'Practical - Focused on solutions' }
+      ],
+      categories: [
+        { value: 'custom', label: 'Custom' },
+        { value: 'assistant', label: 'Assistant' },
+        { value: 'friend', label: 'Friend' },
+        { value: 'professional', label: 'Professional' },
+        { value: 'creative', label: 'Creative' },
+        { value: 'educational', label: 'Educational' },
+        { value: 'entertainment', label: 'Entertainment' },
+        { value: 'historical', label: 'Historical' },
+        { value: 'fictional', label: 'Fictional' }
+      ]
+    };
+
+    console.log(`✅ Character options prepared - ${characterOptions.personalityTraits.length} personality traits, ${characterOptions.speakingStyles.length} speaking styles`);
+    
+    res.json(characterOptions);
+
+  } catch (error) {
+    console.error("❌ Get character options error:", error);
+    res.status(500).json({
+      message: "Failed to fetch character options",
+      error: process.env.NODE_ENV === 'development' ? error.message : "Internal server error"
+    });
+  }
+};
 
 // Create default characters for new users
 export const createDefaultCharacters = async (userId) => {
@@ -208,6 +305,9 @@ export const createCharacter = async (req, res) => {
       avatar, 
       category, 
       tags, 
+      expertise,
+      primaryLanguage,
+      responseStyle,
       isPublic 
     } = req.body;
 
@@ -229,6 +329,9 @@ export const createCharacter = async (req, res) => {
       avatar: avatar || "🤖",
       category: category || "custom",
       tags: Array.isArray(tags) ? tags : (tags ? tags.split(',').map(tag => tag.trim()) : []),
+      expertise: Array.isArray(expertise) ? expertise : (expertise ? expertise.split(',').map(exp => exp.trim()) : []),
+      primaryLanguage: primaryLanguage || "english",
+      responseStyle: responseStyle || "conversational",
       isPublic: isPublic || false,
       creator: userId
     });
