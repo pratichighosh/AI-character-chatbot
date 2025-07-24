@@ -1,84 +1,142 @@
+// routes/userRoutes.js - MINIMAL WORKING VERSION
+import express from "express";
+import { loginUser, verifyUser, getMyProfile } from "../controllers/userControllers.js";
+import isAuth from "../middlewares/isAuth.js";
 
-// ✅ NEW: Frontend debugging route
-router.get("/debug-frontend", (req, res) => {
-  console.log("🐛 === FRONTEND DEBUG ROUTE ===");
+const router = express.Router();
+
+console.log("👤 === USER ROUTES STARTING ===");
+
+// Debug middleware
+router.use((req, res, next) => {
+  console.log(`\n🔍 USER ROUTE: ${req.method} ${req.originalUrl}`);
+  console.log(`📦 Body:`, req.body);
+  console.log(`🔍 Query:`, req.query);
+  next();
+});
+
+// ============================================
+// ✅ LOGIN - Send OTP
+// ============================================
+router.post("/login", async (req, res) => {
+  console.log("📧 === LOGIN ROUTE HIT ===");
+  try {
+    await loginUser(req, res);
+  } catch (error) {
+    console.error("❌ Login error:", error);
+    res.status(500).json({
+      message: "Login failed",
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// ✅ VERIFY - Handle BOTH GET and POST
+// ============================================
+
+// POST route (correct method)
+router.post("/verify", async (req, res) => {
+  console.log("🔍 === VERIFY POST ROUTE ===");
+  console.log("📦 POST Body:", req.body);
+  
+  try {
+    await verifyUser(req, res);
+  } catch (error) {
+    console.error("❌ Verify POST error:", error);
+    res.status(500).json({
+      message: "Verification failed",
+      error: error.message
+    });
+  }
+});
+
+// GET route (frontend compatibility - handles the 404 issue)
+router.get("/verify", (req, res) => {
+  console.log("🔍 === VERIFY GET ROUTE ===");
+  console.log("⚠️ Frontend made GET request instead of POST");
+  console.log("🔍 Query params:", req.query);
+  
+  // If OTP and token are in query params, process them
+  const { otp, verifyToken } = req.query;
+  
+  if (otp && verifyToken) {
+    console.log("🔄 Converting GET params to POST body...");
+    req.body = { otp, verifyToken };
+    return verifyUser(req, res);
+  }
+  
+  // Return helpful response instead of 404
+  res.status(400).json({
+    success: false,
+    message: "Use POST method for OTP verification",
+    method: "This is a GET request to /verify",
+    solution: "Frontend should use POST with OTP in request body",
+    example: {
+      method: "POST",
+      url: "/api/user/verify",
+      body: { otp: "123456", verifyToken: "token" }
+    }
+  });
+});
+
+// ============================================
+// ✅ OTHER ROUTES
+// ============================================
+
+// Test route
+router.get("/test", (req, res) => {
+  console.log("🧪 USER TEST ROUTE");
   res.json({
-    message: "Frontend debugging information",
-    commonIssues: {
-      "404 on verify": "Frontend making GET instead of POST request",
-      "Wrong endpoint": "Check if frontend is using correct URL",
-      "Missing data": "Ensure OTP and verifyToken are in request body for POST"
-    },
-    frontendFix: {
-      correctMethod: "POST",
-      correctURL: "/api/user/verify", 
-      correctBody: {
-        otp: "123456",
-        verifyToken: "token_from_login"
-      },
-      incorrectMethod: "GET (causes 404 or wrong behavior)"
-    },
-    testCommands: [
-      "curl -X POST /api/user/verify -H 'Content-Type: application/json' -d '{\"otp\":\"123456\",\"verifyToken\":\"token\"}'",
-      "Should NOT use: curl -X GET /api/user/verify?otp=123456&verifyToken=token"
+    message: "✅ User routes working!",
+    routes: [
+      "POST /api/user/login ✅",
+      "POST /api/user/verify ✅", 
+      "GET /api/user/verify ✅ (fallback)",
+      "GET /api/user/me ✅",
+      "GET /api/user/test ✅"
     ]
   });
 });
 
-// ============================================
-// ✅ ERROR HANDLING
-// ============================================
+// Get profile
+router.get("/me", isAuth, async (req, res) => {
+  console.log("👤 GET PROFILE");
+  try {
+    await getMyProfile(req, res);
+  } catch (error) {
+    console.error("❌ Profile error:", error);
+    res.status(500).json({
+      message: "Failed to get profile",
+      error: error.message
+    });
+  }
+});
 
-// Catch-all for debugging unmatched routes
+// ============================================
+// ✅ CATCH-ALL (prevents 404s)
+// ============================================
 router.use("*", (req, res) => {
-  console.log(`❌ === USER ROUTE NOT FOUND ===`);
-  console.log(`❌ Method: ${req.method}`);
-  console.log(`❌ URL: ${req.originalUrl}`);
-  console.log(`❌ This route doesn't exist in user routes`);
+  console.log(`❌ Route not found: ${req.method} ${req.originalUrl}`);
   
   res.status(404).json({
     success: false,
-    message: `User route not found: ${req.method} ${req.originalUrl}`,
-    
-    availableRoutes: {
-      public: [
-        "POST /api/user/login - Send OTP email",
-        "POST /api/user/verify - Verify OTP and get JWT token (RECOMMENDED)",
-        "GET /api/user/verify - Verify OTP (FALLBACK FOR FRONTEND)",
-        "GET /api/user/test - Test route"
-      ],
-      protected: [
-        "GET /api/user/me - Get user profile (requires JWT)",
-        "GET /api/user/test-auth - Test authentication (requires JWT)"
-      ],
-      debug: [
-        "GET /api/user/debug-email - Check email configuration",
-        "GET /api/user/debug-frontend - Frontend debugging help"
-      ]
-    },
-    
-    troubleshooting: {
-      issue: req.method === 'GET' && req.originalUrl.includes('verify') ? 
-        "Frontend making GET request to verify - should use POST" : 
-        "Route not found",
-      solution: req.method === 'GET' && req.originalUrl.includes('verify') ?
-        "Change frontend to use POST /api/user/verify with OTP in request body" :
-        "Check the correct endpoint and HTTP method",
-      supportedMethods: "GET verify route now supported as fallback"
-    },
-    
-    note: "Both GET and POST are now supported for /verify endpoint for frontend compatibility"
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+    availableRoutes: [
+      "POST /api/user/login",
+      "POST /api/user/verify (RECOMMENDED)",
+      "GET /api/user/verify (FALLBACK)", 
+      "GET /api/user/me",
+      "GET /api/user/test"
+    ],
+    note: "Both GET and POST supported for /verify"
   });
 });
 
-console.log("✅ === USER ROUTES CONFIGURED ===");
-console.log("✅ POST /login - Send OTP email");
-console.log("✅ POST /verify - Verify OTP and login (RECOMMENDED)");
-console.log("✅ GET /verify - Verify OTP (FRONTEND COMPATIBILITY)");
-console.log("✅ GET /me - Get user profile (auth required)");
-console.log("✅ GET /test - Test route");
-console.log("✅ GET /test-auth - Test authentication");
-console.log("✅ GET /debug-email - Debug email config");
-console.log("✅ GET /debug-frontend - Frontend debugging help");
+console.log("✅ USER ROUTES LOADED:");
+console.log("✅ POST /login");
+console.log("✅ POST /verify (main)");
+console.log("✅ GET /verify (fallback)");
+console.log("✅ GET /me");
 
 export default router;
