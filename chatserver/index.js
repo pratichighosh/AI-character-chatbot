@@ -206,7 +206,40 @@ app.get("/status", (req, res) => {
     ]
   });
 });
+// ✅ ADD THIS TEST ENDPOINT right after your other app.get endpoints:
 
+app.get("/test-verify-route", (req, res) => {
+  res.json({
+    message: "Testing if verify route exists",
+    loginWorks: "✅ Yes (you confirmed this)",
+    verifyExists: userRoutes ? "✅ Should work" : "❌ No",
+    
+    // Test the actual route
+    testDirectly: "Testing...",
+    
+    availableUserRoutes: [
+      "POST /api/user/login - ✅ WORKING",
+      "POST /api/user/verify - ❓ Testing...",
+      "GET /api/user/me - Should work"
+    ],
+    
+    debugInfo: {
+      serverRunning: "✅ Yes",
+      corsFixed: "✅ Yes", 
+      userRoutesImported: !!userRoutes,
+      userRoutesMounted: "✅ Yes (login works)"
+    }
+  });
+});
+
+// ✅ ADD: Direct test of verify endpoint
+app.post("/test-verify-direct", (req, res) => {
+  res.json({
+    message: "✅ Direct verify test works!",
+    receivedBody: req.body,
+    note: "If this works, the issue is in userRoutes.js verify handler"
+  });
+});
 // Test Gemini API Key
 app.get("/test-my-key", async (req, res) => {
   try {
