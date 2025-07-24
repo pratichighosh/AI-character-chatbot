@@ -36,15 +36,19 @@ const Verify = () => {
     }
   }, [navigate]);
 
+  // ✅ FIXED: Ensure form submits POST request
   const submitHandler = (e) => {
-    e.preventDefault();
+    e.preventDefault(); // Prevent default form submission
+    e.stopPropagation(); // Stop event bubbling
+    
+    console.log('🔍 Form submitted - verifying OTP:', otp);
     
     if (!otp || otp.length !== 6) {
       alert("Please enter a valid 6-digit OTP");
       return;
     }
     
-    // ✅ FIXED: Only pass otp and navigate, remove fetchChats
+    // ✅ FIXED: Call verifyUser correctly (this should make POST request)
     verifyUser(Number(otp), navigate);
   };
 
@@ -65,9 +69,11 @@ const Verify = () => {
 
   return (
     <div className="flex justify-center items-center h-screen bg-gray-50">
+      {/* ✅ FIXED: Ensure form has correct method and onSubmit */}
       <form
         className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md"
         onSubmit={submitHandler}
+        method="POST"
       >
         <div className="text-center mb-6">
           <h2 className="text-3xl font-bold text-gray-800 mb-2">Verify OTP</h2>
@@ -83,11 +89,13 @@ const Verify = () => {
           <input
             type="text"
             id="otp"
+            name="otp"
             value={otp}
             onChange={handleOtpChange}
             className="border-2 border-gray-300 p-3 w-full rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-center text-2xl font-mono tracking-widest"
             placeholder="000000"
             maxLength="6"
+            autoComplete="one-time-code"
             required
           />
         </div>
@@ -105,6 +113,7 @@ const Verify = () => {
           )}
         </div>
 
+        {/* ✅ FIXED: Ensure button type is submit */}
         <button 
           type="submit"
           className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -136,10 +145,12 @@ const Verify = () => {
           </button>
         </div>
 
-        {/* Debug info (remove in production) */}
+        {/* Debug info */}
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-4 p-2 bg-gray-100 rounded text-xs text-gray-600">
-            <p>Debug: Check browser console and server logs for OTP details</p>
+            <p>Debug: OTP verification will use POST method</p>
+            <p>Backend: https://ai-character-chatbot-2.onrender.com</p>
+            <p>Endpoint: POST /api/user/verify</p>
           </div>
         )}
       </form>

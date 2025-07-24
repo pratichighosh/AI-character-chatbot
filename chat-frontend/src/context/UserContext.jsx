@@ -22,6 +22,7 @@ export const UserProvider = ({ children }) => {
     try {
       console.log(`📧 Sending login request for: ${email}`);
       
+      // ✅ CORRECT: POST request to /api/user/login
       const { data } = await axios.post(`${server}/api/user/login`, { 
         email: email.trim().toLowerCase() 
       });
@@ -41,19 +42,13 @@ export const UserProvider = ({ children }) => {
       const errorMessage = error.response?.data?.message || "Failed to send OTP. Please try again.";
       toast.error(errorMessage);
       
-      // Log additional debug info
-      if (error.response?.data?.emailConfigured === false) {
-        console.error("❌ Email not configured on server");
-        toast.error("Email service not configured. Please contact support.");
-      }
-      
     } finally {
       setBtnLoading(false);
     }
   }
 
-  // Verify OTP function
-  async function verifyUser(otp, navigate, fetchChats) {
+  // ✅ FIXED: Verify OTP function with correct POST request
+  async function verifyUser(otp, navigate) {
     const verifyToken = localStorage.getItem("verifyToken");
     
     if (!verifyToken) {
@@ -71,10 +66,19 @@ export const UserProvider = ({ children }) => {
     
     try {
       console.log(`🔍 Verifying OTP: ${otp}`);
+      console.log(`📤 Making POST request to: ${server}/api/user/verify`);
       
-      const { data } = await axios.post(`${server}/api/user/verify`, {
-        otp: Number(otp),
-        verifyToken,
+      // ✅ CRITICAL FIX: Ensure this is a POST request with correct data
+      const { data } = await axios({
+        method: 'POST',
+        url: `${server}/api/user/verify`,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        data: {
+          otp: Number(otp),
+          verifyToken: verifyToken
+        }
       });
 
       console.log("✅ OTP verification successful:", data.message);
@@ -88,22 +92,30 @@ export const UserProvider = ({ children }) => {
       setIsAuth(true);
       setUser(data.user);
       
-      // Fetch user chats
-      if (fetchChats) {
-        await fetchChats();
-      }
-      
       // Navigate to main application
       navigate("/");
       
     } catch (error) {
       console.error("❌ Verification error:", error);
+      console.error("❌ Error details:", {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          method: error.config?.method,
+          url: error.config?.url
+        }
+      });
       
       const errorMessage = error.response?.data?.message || "OTP verification failed. Please try again.";
       toast.error(errorMessage);
       
       // Handle specific error cases
-      if (error.response?.data?.expired) {
+      if (error.response?.status === 404) {
+        console.error("🚨 404 ERROR: Verify endpoint not found!");
+        console.error("🔧 Check backend route mounting");
+        toast.error("Server error: Verification endpoint not found");
+      } else if (error.response?.data?.expired) {
         toast.error("OTP has expired. Please request a new one.");
         setTimeout(() => navigate("/login"), 2000);
       } else if (error.response?.data?.invalid) {
@@ -131,10 +143,10 @@ export const UserProvider = ({ children }) => {
       console.log("👤 Fetching user profile...");
 
       const { data } = await axios.get(`${server}/api/user/me`, {
-  headers: {
-    Authorization: `Bearer ${token}`,
-  },
-});
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       console.log("✅ User profile fetched:", data.email);
       
