@@ -1,5 +1,5 @@
 // COMPLETE FIXED backend/index.js - Character Support Integrated
-// Your existing working server + character functionality + DIRECT USER ROUTE MOUNTING FIX
+// Your existing working server + character functionality
 
 // STEP 1: FORCE SET YOUR CONFIGURATION WITH YOUR NEW API KEY
 process.env.EMAIL_USERNAME = 'pratichighosh053@gmail.com';
@@ -23,21 +23,20 @@ import connectDb from "./database/db.js";
 import cors from "cors";
 import dotenv from "dotenv";
 
-// ✅ CRITICAL FIX: Import user controllers directly for direct mounting
-import { loginUser, verifyUser, getMyProfile } from "./controllers/userControllers.js";
-import isAuth from "./middlewares/isAuth.js";
-
 // Load additional env vars if .env file exists
 dotenv.config();
 
 const app = express();
 
 // STEP 3: MIDDLEWARE SETUP
+// SIMPLE FIX: Just replace the CORS section in your index.js with this
+
 app.use(cors({
-  origin: ["https://ai-character-chatbot-one.vercel.app", "http://localhost:3000", "http://localhost:5173"],
+  origin: true, // ✅ ALLOW ALL ORIGINS - fixes CORS errors
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'token']
+  allowedHeaders: ['Content-Type', 'Authorization', 'token', 'Origin', 'X-Requested-With', 'Accept'],
+  optionsSuccessStatus: 200
 }));
 
 app.use(express.json({ limit: '50mb' }));
@@ -52,14 +51,14 @@ app.use((req, res, next) => {
 // STEP 4: IMPORT ROUTES WITH ENHANCED ERROR HANDLING
 let userRoutes, chatRoutes, characterRoutes, generateResponse;
 
-// Import User Routes (keep for compatibility, but use direct mounting)
+// Import User Routes
 try {
   const userRoutesModule = await import("./routes/userRoutes.js");
   userRoutes = userRoutesModule.default;
-  console.log('✅ User routes imported successfully (using direct mounting for fix)');
+  console.log('✅ User routes imported successfully');
 } catch (error) {
   console.error('❌ Failed to import user routes:', error.message);
-  console.log('⚠️ Will use direct mounting instead');
+  console.error('❌ Make sure routes/userRoutes.js exists');
 }
 
 // Import Chat Routes
@@ -120,65 +119,15 @@ try {
   console.error('❌ Failed to import Gemini functions:', error.message);
 }
 
-// ==========================================
-// ✅ CRITICAL FIX: DIRECT USER ROUTE MOUNTING
-// ==========================================
-console.log('\n🔧 === MOUNTING USER ROUTES DIRECTLY (404 FIX) ===');
+// STEP 5: MOUNT ROUTES WITH ENHANCED ERROR HANDLING
 
-// Direct user route mounting - GUARANTEED TO WORK
-app.post("/api/user/login", async (req, res) => {
-  console.log("📧 DIRECT LOGIN ROUTE HIT");
-  try {
-    await loginUser(req, res);
-  } catch (error) {
-    console.error("❌ Login error:", error);
-    res.status(500).json({ message: "Login failed", error: error.message });
-  }
-});
-
-app.post("/api/user/verify", async (req, res) => {
-  console.log("🔍 DIRECT VERIFY ROUTE HIT - 404 ISSUE FIXED!");
-  console.log("🔍 Method:", req.method);
-  console.log("🔍 Body:", req.body);
-  try {
-    await verifyUser(req, res);
-  } catch (error) {
-    console.error("❌ Verify error:", error);
-    res.status(500).json({ message: "Verification failed", error: error.message });
-  }
-});
-
-app.get("/api/user/me", isAuth, async (req, res) => {
-  console.log("👤 DIRECT PROFILE ROUTE HIT");
-  try {
-    await getMyProfile(req, res);
-  } catch (error) {
-    console.error("❌ Profile error:", error);
-    res.status(500).json({ message: "Profile failed", error: error.message });
-  }
-});
-
-// Test route for user system
-app.get("/api/user/test", (req, res) => {
-  console.log("🧪 DIRECT USER TEST ROUTE HIT");
-  res.json({
-    message: "✅ Direct user routes working! 404 issue fixed!",
-    timestamp: new Date().toISOString(),
-    routes: [
-      "POST /api/user/login - ✅ Directly mounted",
-      "POST /api/user/verify - ✅ Directly mounted (404 FIXED)", 
-      "GET /api/user/me - ✅ Directly mounted"
-    ],
-    fix: "Using direct route mounting instead of route file imports"
-  });
-});
-
-console.log('✅ USER ROUTES DIRECTLY MOUNTED - 404 ISSUE FIXED:');
-console.log('   POST /api/user/login - ✅ Direct');
-console.log('   POST /api/user/verify - ✅ Direct (NO MORE 404!)');
-console.log('   GET /api/user/me - ✅ Direct');
-
-// STEP 5: MOUNT OTHER ROUTES (EXISTING SYSTEM)
+// Mount User Routes
+if (userRoutes) {
+  app.use("/api/user", userRoutes);
+  console.log('✅ User routes mounted at /api/user');
+} else {
+  console.error('❌ User routes not available');
+}
 
 // Mount Chat Routes
 if (chatRoutes) {
@@ -259,23 +208,22 @@ if (characterRoutes) {
 // Root endpoint
 app.get("/", (req, res) => {
   res.json({
-    message: "🤖 Enhanced ChatBot Server is running! (Regular + Character Chat) - 404 ISSUE FIXED",
+    message: "🤖 Enhanced ChatBot Server is running! (Regular + Character Chat)",
     status: "active",
     timestamp: new Date().toISOString(),
     emailConfigured: !!process.env.EMAIL_USERNAME,
     geminiConfigured: !!process.env.GEMINI_API_KEY,
     geminiKeyPreview: process.env.GEMINI_API_KEY ? 
       process.env.GEMINI_API_KEY.substring(0, 20) + '...' : 'NOT_FOUND',
-    fix: "✅ User routes now use direct mounting - verify endpoint 404 fixed!",
     features: {
-      regularChat: "✅ Available", // Always true now with direct mounting
+      regularChat: userRoutes && chatRoutes ? "✅ Available" : "❌ Missing routes",
       characterChat: characterRoutes ? "✅ Available" : "❌ Disabled",
       characterCreation: characterRoutes ? "✅ Available" : "❌ Disabled",
       characterOptions: characterRoutes ? "✅ Available" : "❌ Disabled", // ✅ NEW
-      userManagement: "✅ Available" // Always true now with direct mounting
+      userManagement: userRoutes ? "✅ Available" : "❌ Missing"
     },
     systemStatus: {
-      userRoutes: true, // Always true now with direct mounting
+      userRoutes: !!userRoutes,
       chatRoutes: !!chatRoutes,
       characterRoutes: !!characterRoutes,
       geminiAPI: !!process.env.GEMINI_API_KEY
@@ -295,14 +243,13 @@ app.get("/", (req, res) => {
 app.get("/status", (req, res) => {
   res.json({
     server: "Enhanced ChatBot",
-    version: "1.0.1 - 404 FIXED", 
+    version: "1.0.0", 
     status: "running",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    fix: "✅ Direct user route mounting implemented - verify endpoint working",
     systems: {
       database: "✅ Connected",
-      userSystem: "✅ Active (Direct Mount)", // Always active now
+      userSystem: userRoutes ? "✅ Active" : "❌ Inactive",
       chatSystem: chatRoutes ? "✅ Active" : "❌ Inactive", 
       characterSystem: characterRoutes ? "✅ Active" : "❌ Inactive",
       characterOptions: characterRoutes ? "✅ Active" : "❌ Inactive", // ✅ NEW
@@ -310,7 +257,7 @@ app.get("/status", (req, res) => {
       emailService: process.env.EMAIL_USERNAME ? "✅ Configured" : "❌ Missing"
     },
     features: [
-      "✅ User Authentication (Email OTP) - DIRECT MOUNT",
+      "✅ User Authentication (Email OTP)",
       "✅ Regular AI Chat",
       characterRoutes ? "✅ Character-based AI Chat" : "❌ Character Chat (Disabled)",
       characterRoutes ? "✅ Custom Character Creation" : "❌ Character Creation (Disabled)",
@@ -703,7 +650,7 @@ app.get("/test-env", (req, res) => {
         '...' + process.env.GEMINI_API_KEY.slice(-10) : 'NOT FOUND'
     },
     systemStatus: {
-      userRoutes: true, // Always true now with direct mounting
+      userRoutes: !!userRoutes,
       chatRoutes: !!chatRoutes,
       characterRoutes: !!characterRoutes,
       generateResponse: !!generateResponse
@@ -717,11 +664,10 @@ app.get("/health", (req, res) => {
     status: "healthy",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    version: "1.0.1 - 404 FIXED",
-    fix: "✅ Direct user route mounting - verify endpoint working",
+    version: "1.0.0",
     features: {
-      userAuthentication: "✅ Available (Direct Mount)", // Always available now
-      regularChat: (chatRoutes) ? "✅ Available" : "❌ Missing",
+      userAuthentication: userRoutes ? "✅ Available" : "❌ Missing",
+      regularChat: (userRoutes && chatRoutes) ? "✅ Available" : "❌ Missing",
       characterChat: characterRoutes ? "✅ Available" : "❌ Disabled", 
       characterCreation: characterRoutes ? "✅ Available" : "❌ Disabled",
       characterOptions: characterRoutes ? "✅ Available" : "❌ Disabled", // ✅ NEW
@@ -729,7 +675,7 @@ app.get("/health", (req, res) => {
       emailService: process.env.EMAIL_USERNAME ? "✅ Configured" : "❌ Missing"
     },
     routes: {
-      "/api/user/*": "✅ Mounted (Direct)", // Always mounted now
+      "/api/user/*": userRoutes ? "✅ Mounted" : "❌ Missing",
       "/api/chat/*": chatRoutes ? "✅ Mounted" : "❌ Missing",
       "/api/characters/*": characterRoutes ? "✅ Mounted" : "❌ Disabled"
     }
@@ -763,11 +709,10 @@ app.get("/debug-routes", (req, res) => {
     totalRoutes: routes.length,
     routes: routes.sort(),
     systemStatus: {
-      userRoutes: true, // Always true now with direct mounting
+      userRoutes: !!userRoutes,
       chatRoutes: !!chatRoutes,
       characterRoutes: !!characterRoutes
-    },
-    fix: "✅ User routes now use direct mounting - verify endpoint guaranteed to work"
+    }
   });
 });
 
@@ -798,7 +743,6 @@ app.use('*', (req, res) => {
     message: `Route ${req.originalUrl} not found`,
     method: req.method,
     timestamp: new Date().toISOString(),
-    note: "✅ User routes now use direct mounting - /api/user/verify should work",
     availableRoutes: {
       main: [
         'GET / - Server info',
@@ -816,9 +760,9 @@ app.use('*', (req, res) => {
         'GET /test-character-options - Test character options endpoint' // ✅ NEW
       ],
       api: [
-        'POST /api/user/login - User login (✅ DIRECT MOUNT)',
-        'POST /api/user/verify - Verify OTP (✅ DIRECT MOUNT - 404 FIXED)',
-        'GET /api/user/me - User profile (✅ DIRECT MOUNT)',
+        'POST /api/user/login - User login',
+        'POST /api/user/verify - Verify OTP',
+        'GET /api/user/me - User profile',
         'POST /api/chat/new - Create chat',
         'GET /api/chat/all - Get all chats',
         'GET /api/chat/:id - Get chat conversations',
@@ -864,13 +808,8 @@ const startServer = async () => {
       console.log(`🔑 Key ending: ...${process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.slice(-10) : 'NONE'}`);
       console.log(`🔗 Server URL: http://localhost:${PORT}`);
       
-      console.log('\n🔧 === 404 FIX APPLIED ===');
-      console.log('✅ User routes now use DIRECT MOUNTING');
-      console.log('✅ POST /api/user/verify will NO LONGER return 404');
-      console.log('✅ OTP verification should work perfectly now');
-      
       console.log('\n📋 === SYSTEM STATUS ===');
-      console.log('👤 User System: ✅ Active (Direct Mount - 404 Fixed)');
+      console.log(`👤 User System: ${userRoutes ? '✅ Active' : '❌ Inactive'}`);
       console.log(`💬 Chat System: ${chatRoutes ? '✅ Active' : '❌ Inactive'}`);
       console.log(`🎭 Character System: ${characterRoutes ? '✅ Active' : '❌ Disabled'}`);
       console.log(`🔧 Character Options: ${characterRoutes ? '✅ Active' : '❌ Disabled'}`); // ✅ NEW
@@ -891,22 +830,21 @@ const startServer = async () => {
       }
       
       console.log('\n🎯 === NEXT STEPS ===');
-      console.log('✅ 1. 404 issue FIXED - verify endpoint ready!');
-      console.log('✅ 2. Test OTP flow in frontend - should work now');
       if (characterRoutes) {
-        console.log('✅ 3. Character system is ready!');
-        console.log('✅ 4. Character options endpoint available!'); // ✅ NEW
-        console.log('✅ 5. Try creating characters in the frontend');
-        console.log('✅ 6. Chat with Einstein, Sherlock, Shakespeare!');
+        console.log('✅ 1. Character system is ready!');
+        console.log('✅ 2. Character options endpoint available!'); // ✅ NEW
+        console.log('✅ 3. Test character routes: /test-character-system');
+        console.log('✅ 4. Try creating characters in the frontend');
+        console.log('✅ 5. Chat with Einstein, Sherlock, Shakespeare!');
       } else {
-        console.log('❌ 3. Character system disabled - missing files');
-        console.log('❌ 4. Create required files: Character.js, characterControllers.js');
-        console.log('❌ 5. Check debug endpoint: /debug-character-system');
-        console.log('❌ 6. Restart server after creating files');
+        console.log('❌ 1. Character system disabled - missing files');
+        console.log('❌ 2. Create required files: Character.js, characterControllers.js');
+        console.log('❌ 3. Check debug endpoint: /debug-character-system');
+        console.log('❌ 4. Restart server after creating files');
       }
       
       console.log('\n🎭 === AVAILABLE FEATURES ===');
-      console.log('✅ User Authentication (Email OTP) - DIRECT MOUNT');
+      console.log('✅ User Authentication (Email OTP)');
       console.log('✅ Regular AI Chat');
       console.log('✅ Chat History Management');
       console.log(`${characterRoutes ? '✅' : '❌'} Character-based AI Chat`);
@@ -914,16 +852,10 @@ const startServer = async () => {
       console.log(`${characterRoutes ? '✅' : '❌'} Character Creation Options API`); // ✅ NEW
       console.log(`${characterRoutes ? '✅' : '❌'} Pre-built Characters (Einstein, Sherlock, etc.)`);
       
-      console.log('\n🔥 === 404 ISSUE RESOLUTION ===');
-      console.log('✅ PROBLEM: POST /api/user/verify returned 404');
-      console.log('✅ SOLUTION: Direct route mounting bypasses import issues');
-      console.log('✅ RESULT: Verify endpoint guaranteed to work');
-      console.log('✅ STATUS: OTP verification flow should work perfectly now');
-      
       console.log('\n================================');
-      console.log('🎉 SERVER READY - 404 ISSUE FIXED!');
+      console.log('🎉 SERVER READY FOR CONNECTIONS!');
       console.log('🎭 CHARACTER SYSTEM FULLY OPERATIONAL!');
-      console.log('🔧 OTP VERIFICATION WORKING!');
+      console.log('🔧 CHARACTER OPTIONS ENDPOINT READY!'); // ✅ NEW
       console.log('================================\n');
     });
     
