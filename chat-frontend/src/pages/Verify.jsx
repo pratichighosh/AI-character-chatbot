@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { UserData } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import { LoadingSpinner } from "../components/Loading";
-import { ChatData } from "../context/ChatContext";
 
 const Verify = () => {
   const [otp, setOtp] = useState("");
@@ -10,7 +9,6 @@ const Verify = () => {
   const [canResend, setCanResend] = useState(false);
 
   const { verifyUser, btnLoading, resendOTP } = UserData();
-  const { fetchChats } = ChatData();
   const navigate = useNavigate();
 
   // Format time for display
@@ -46,7 +44,8 @@ const Verify = () => {
       return;
     }
     
-    verifyUser(Number(otp), navigate, fetchChats);
+    // ✅ FIXED: Only pass otp and navigate, remove fetchChats
+    verifyUser(Number(otp), navigate);
   };
 
   const handleResendOTP = () => {
