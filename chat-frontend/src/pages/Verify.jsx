@@ -1,3 +1,4 @@
+// pages/Verify.jsx - FIXED TO PREVENT GET REQUEST
 import React, { useState, useEffect } from "react";
 import { UserData } from "../context/UserContext";
 import { useNavigate } from "react-router-dom";
@@ -36,32 +37,49 @@ const Verify = () => {
     }
   }, [navigate]);
 
-  // ✅ FIXED: Ensure form submits POST request
+  // ✅ FIXED: Prevent form from making GET request
   const submitHandler = (e) => {
-    e.preventDefault(); // Prevent default form submission
-    e.stopPropagation(); // Stop event bubbling
+    e.preventDefault(); // ✅ CRITICAL: Prevent form default submission
+    e.stopPropagation(); // ✅ CRITICAL: Stop event bubbling
     
     console.log('🔍 Form submitted - verifying OTP:', otp);
+    console.log('🔍 This should make a POST request, not GET');
+    
+    if (!otp || otp.length !== 6) {
+      alert("Please enter a valid 6-digit OTP");
+      return false; // ✅ CRITICAL: Return false to prevent submission
+    }
+    
+    // ✅ FIXED: Call verifyUser - this makes POST request
+    verifyUser(Number(otp), navigate);
+    
+    return false; // ✅ CRITICAL: Prevent any form submission
+  };
+
+  // ✅ NEW: Handle button click directly (bypass form)
+  const handleVerifyClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('🔍 Button clicked - verifying OTP:', otp);
     
     if (!otp || otp.length !== 6) {
       alert("Please enter a valid 6-digit OTP");
       return;
     }
     
-    // ✅ FIXED: Call verifyUser correctly (this should make POST request)
     verifyUser(Number(otp), navigate);
   };
 
   const handleResendOTP = () => {
-    setTimeLeft(600); // Reset timer
+    setTimeLeft(600);
     setCanResend(false);
-    setOtp(""); // Clear current OTP
+    setOtp("");
     resendOTP(navigate);
   };
 
   const handleOtpChange = (e) => {
     const value = e.target.value;
-    // Only allow numbers and limit to 6 digits
     if (/^\d{0,6}$/.test(value)) {
       setOtp(value);
     }
@@ -69,11 +87,10 @@ const Verify = () => {
 
   return (
     <div className="flex justify-center items-center h-screen bg-gray-50">
-      {/* ✅ FIXED: Ensure form has correct method and onSubmit */}
+      {/* ✅ FIXED: Form with proper prevention */}
       <form
         className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md"
         onSubmit={submitHandler}
-        method="POST"
       >
         <div className="text-center mb-6">
           <h2 className="text-3xl font-bold text-gray-800 mb-2">Verify OTP</h2>
@@ -113,9 +130,10 @@ const Verify = () => {
           )}
         </div>
 
-        {/* ✅ FIXED: Ensure button type is submit */}
+        {/* ✅ FIXED: Button with direct click handler */}
         <button 
-          type="submit"
+          type="button"
+          onClick={handleVerifyClick}
           className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={btnLoading || otp.length !== 6}
         >
@@ -148,7 +166,7 @@ const Verify = () => {
         {/* Debug info */}
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-4 p-2 bg-gray-100 rounded text-xs text-gray-600">
-            <p>Debug: OTP verification will use POST method</p>
+            <p>🔍 Debug: Using button click (POST) instead of form submit (GET)</p>
             <p>Backend: https://ai-character-chatbot-2.onrender.com</p>
             <p>Endpoint: POST /api/user/verify</p>
           </div>
