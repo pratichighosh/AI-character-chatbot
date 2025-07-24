@@ -36,27 +36,27 @@ const Verify = () => {
     }
   }, [navigate]);
 
-  // ✅ FIXED: Ensure form submits POST request
-  const submitHandler = (e) => {
+  // ✅ FIXED: Ensure proper form submission handling
+  const submitHandler = async (e) => {
     e.preventDefault(); // Prevent default form submission
     e.stopPropagation(); // Stop event bubbling
     
     console.log('🔍 Form submitted - verifying OTP:', otp);
     
     if (!otp || otp.length !== 6) {
-      alert("Please enter a valid 6-digit OTP");
+      toast.error("Please enter a valid 6-digit OTP");
       return;
     }
     
-    // ✅ FIXED: Call verifyUser correctly (this should make POST request)
-    verifyUser(Number(otp), navigate);
+    // ✅ FIXED: Call verifyUser with proper OTP format
+    await verifyUser(otp, navigate); // Pass as string, verifyUser converts to number
   };
 
-  const handleResendOTP = () => {
+  const handleResendOTP = async () => {
     setTimeLeft(600); // Reset timer
     setCanResend(false);
     setOtp(""); // Clear current OTP
-    resendOTP(navigate);
+    await resendOTP(navigate);
   };
 
   const handleOtpChange = (e) => {
@@ -67,13 +67,20 @@ const Verify = () => {
     }
   };
 
+  // ✅ ADDITIONAL FIX: Handle Enter key press
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && otp.length === 6 && !btnLoading) {
+      submitHandler(e);
+    }
+  };
+
   return (
     <div className="flex justify-center items-center h-screen bg-gray-50">
-      {/* ✅ FIXED: Ensure form has correct method and onSubmit */}
+      {/* ✅ FIXED: Remove method="POST" from form as it's handled by React */}
       <form
         className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md"
         onSubmit={submitHandler}
-        method="POST"
+        noValidate
       >
         <div className="text-center mb-6">
           <h2 className="text-3xl font-bold text-gray-800 mb-2">Verify OTP</h2>
@@ -92,11 +99,15 @@ const Verify = () => {
             name="otp"
             value={otp}
             onChange={handleOtpChange}
+            onKeyPress={handleKeyPress}
             className="border-2 border-gray-300 p-3 w-full rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-center text-2xl font-mono tracking-widest"
             placeholder="000000"
             maxLength="6"
             autoComplete="one-time-code"
+            inputMode="numeric"
+            pattern="[0-9]*"
             required
+            disabled={btnLoading}
           />
         </div>
 
@@ -113,7 +124,7 @@ const Verify = () => {
           )}
         </div>
 
-        {/* ✅ FIXED: Ensure button type is submit */}
+        {/* ✅ FIXED: Ensure button properly submits */}
         <button 
           type="submit"
           className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -140,6 +151,7 @@ const Verify = () => {
             type="button"
             onClick={() => navigate("/login")}
             className="text-gray-500 hover:text-gray-700 text-sm underline"
+            disabled={btnLoading}
           >
             Back to Login
           </button>
@@ -148,9 +160,11 @@ const Verify = () => {
         {/* Debug info */}
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-4 p-2 bg-gray-100 rounded text-xs text-gray-600">
-            <p>Debug: OTP verification will use POST method</p>
-            <p>Backend: https://ai-character-chatbot-2.onrender.com</p>
-            <p>Endpoint: POST /api/user/verify</p>
+            <p>✅ Debug: OTP verification uses POST method</p>
+            <p>📡 Backend: {localStorage.getItem('server') || 'https://ai-character-chatbot-2.onrender.com'}</p>
+            <p>🎯 Endpoint: POST /api/user/verify</p>
+            <p>📦 Payload: {`{ otp: ${otp || 'XXXXXX'}, verifyToken: "..." }`}</p>
+            <p>🔒 Token exists: {localStorage.getItem('verifyToken') ? '✅' : '❌'}</p>
           </div>
         )}
       </form>

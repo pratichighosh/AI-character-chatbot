@@ -68,16 +68,13 @@ export const UserProvider = ({ children }) => {
       console.log(`🔍 Verifying OTP: ${otp}`);
       console.log(`📤 Making POST request to: ${server}/api/user/verify`);
       
-      // ✅ CRITICAL FIX: Ensure this is a POST request with correct data
-      const { data } = await axios({
-        method: 'POST',
-        url: `${server}/api/user/verify`,
+      // ✅ CRITICAL FIX: Use axios.post() instead of axios() for cleaner implementation
+      const { data } = await axios.post(`${server}/api/user/verify`, {
+        otp: Number(otp),
+        verifyToken: verifyToken
+      }, {
         headers: {
           'Content-Type': 'application/json'
-        },
-        data: {
-          otp: Number(otp),
-          verifyToken: verifyToken
         }
       });
 
@@ -111,7 +108,10 @@ export const UserProvider = ({ children }) => {
       toast.error(errorMessage);
       
       // Handle specific error cases
-      if (error.response?.status === 404) {
+      if (error.response?.status === 405) {
+        console.error("🚨 405 ERROR: Method not allowed - check if backend expects POST");
+        toast.error("Server error: Invalid request method");
+      } else if (error.response?.status === 404) {
         console.error("🚨 404 ERROR: Verify endpoint not found!");
         console.error("🔧 Check backend route mounting");
         toast.error("Server error: Verification endpoint not found");
