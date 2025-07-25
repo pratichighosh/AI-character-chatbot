@@ -76,11 +76,7 @@ const Verify = () => {
           </button>
         </div>
 
-        <div className="mt-4 p-2 bg-green-100 rounded text-xs text-green-800">
-          <p>✅ Simple component - no infinite mounting</p>
-          <p>✅ GET requests now handled by backend</p>
-          <p>✅ POST requests work for verification</p>
-        </div>
+       
       </div>
     </div>
   );
