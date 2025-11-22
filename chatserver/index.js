@@ -37,6 +37,7 @@ const app = express();
 app.use(cors({
   origin: [
     'https://ai-character-chatbot-one.vercel.app',
+    'https://ai-character-chatbot-g0oqstjc7-pratichighoshs-projects.vercel.app', // ✅ ADD THIS LINE
     'http://localhost:3000',
     'http://localhost:5173'
   ],
@@ -50,6 +51,7 @@ app.use(cors({
 app.options('*', cors({
   origin: [
     'https://ai-character-chatbot-one.vercel.app',
+    'https://ai-character-chatbot-g0oqstjc7-pratichighoshs-projects.vercel.app', // ✅ ADD THIS LINE
     'http://localhost:3000', 
     'http://localhost:5173'
   ],
