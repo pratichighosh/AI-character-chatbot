@@ -2,7 +2,7 @@
 
 import User from "../models/User.js";
 import jwt from "jsonwebtoken";
-import { sendMail } from "../middlewares/sendMail.js";
+import { sendMail } from "../sendgrid-email.js"; 
 
 const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000);
