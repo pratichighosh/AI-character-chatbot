@@ -3,7 +3,7 @@
 
 // STEP 1: FORCE SET YOUR CONFIGURATION WITH YOUR API KEY
 process.env.EMAIL_USERNAME = 'pratichighosh053@gmail.com';
-process.env.EMAIL_PASSWORD = 'afidwpueqljxgqhc';
+process.env.EMAIL_PASSWORD = 'eiji xvxp wcby alcq';
 process.env.MONGO_URI = 'mongodb+srv://pratichi:gCYori949YywxME1@cluster0.glggi.mongodb.net/chatbot?retryWrites=true&w=majority&appName=Cluster0';
 process.env.JWT_SECRET = 'TlAO4P03Yp6AHlmu1BDWRlR14JZMXdeK';
 process.env.ACTIVATION_SECRET = 'TlAO4P03Yp6AHlmu1BDWRlR14JZMXdeK';
