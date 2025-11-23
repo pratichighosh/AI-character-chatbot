@@ -11,6 +11,7 @@ process.env.GEMINI_API_KEY = 'AIzaSyDhcus-LZLJ84lmLzxXi38nbkhe-9QZYvQ';
 process.env.PORT = '5000';
 process.env.NODE_ENV = 'development';
 
+
 console.log('\n🚀 === STARTING ENHANCED CHATBOT SERVER ===');
 console.log('🔧 FORCE CONFIGURED EMAIL:', process.env.EMAIL_USERNAME);
 console.log('🤖 GEMINI API KEY LOADED:', process.env.GEMINI_API_KEY ? 
