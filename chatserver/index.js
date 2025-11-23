@@ -37,8 +37,8 @@ const app = express();
 // STEP 3: MIDDLEWARE SETUP
 app.use(cors({
   origin: [
-    'https://ai-character-chatbot-one.vercel.app',
-    'https://ai-character-chatbot-g0oqstjc7-pratichighoshs-projects.vercel.app', // ✅ ADD THIS LINE
+    'https://ai-character-chatbot-one.vercel.app', // ✅ This is your current URL
+    'https://ai-character-chatbot-g0oqstjc7-pratichighoshs-projects.vercel.app', // Keep old one too
     'http://localhost:3000',
     'http://localhost:5173'
   ],
